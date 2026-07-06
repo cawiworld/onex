@@ -1,4 +1,4 @@
--- oNex Hub v6.0 COMPETITIVE | Murder Mystery 2
+-- oNex | MM2
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
@@ -15,35 +15,31 @@ if CoreGui:FindFirstChild("oNex_HUD") then CoreGui.oNex_HUD:Destroy() end
 
 local Settings = {
     Visible = true, CurrentTab = "General", MenuBind = Enum.KeyCode.RightControl,
-    
     Noclip = false, NoclipBind = Enum.KeyCode.Unknown,
     SpeedHack = false, SpeedHackBind = Enum.KeyCode.Unknown, WalkSpeed = 25,
     JumpHack = false, JumpHackBind = Enum.KeyCode.Unknown, JumpPower = 60,
     InfJump = false, InfJumpBind = Enum.KeyCode.Unknown,
     Spinbot = false, SpinbotBind = Enum.KeyCode.Unknown, SpinSpeed = 30,
-    
     SilentAim = false, SilentAimBind = Enum.KeyCode.Unknown,
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
     NoSpread = false, NoSpreadBind = Enum.KeyCode.Unknown,
     AutoShoot = false, AutoShootBind = Enum.KeyCode.Unknown,
-    
     FOV = 150, DrawFOV = false, AutoGun = false,
-    
+    Fling = false, FlingBind = Enum.KeyCode.Unknown, FlingTarget = "None",
+    AntiFling = false, AntiFlingBind = Enum.KeyCode.Unknown,
     MurdESP = true, MurdESPBind = Enum.KeyCode.Unknown,
     SheriffESP = true, SheriffESPBind = Enum.KeyCode.Unknown,
     InnocentESP = false, InnocentESPBind = Enum.KeyCode.Unknown,
     GunESP = true, GunESPBind = Enum.KeyCode.Unknown,
     NamesESP = true, NamesESPBind = Enum.KeyCode.Unknown,
-    
     MurdColor = Color3.fromRGB(255, 50, 50), SheriffColor = Color3.fromRGB(50, 120, 255),
     InnocentColor = Color3.fromRGB(50, 255, 50), GunColor = Color3.fromRGB(255, 215, 0),
     ESPFont = Enum.Font.GothamBold
 }
+local CurrentTarget = nil
 
-local CurrentTarget = nil -- Глобальная переменная цели
-
--- Config System
-local cfgName = "oNex_MM2_Config_v6.json"
+-- [ CONFIG ] --
+local cfgName = "oNex_MM2_Config.json"
 local function SaveConfig()
     if writefile then
         local save = {}
@@ -55,10 +51,10 @@ local function SaveConfig()
         pcall(function() writefile(cfgName, HttpService:JSONEncode(save)) end)
     end
 end
-local function LoadConfig()
+pcall(function()
     if isfile and isfile(cfgName) and readfile then
-        local s, res = pcall(function() return HttpService:JSONDecode(readfile(cfgName)) end)
-        if s and type(res) == "table" then
+        local res = HttpService:JSONDecode(readfile(cfgName))
+        if type(res) == "table" then
             for k, v in pairs(res) do
                 if type(v) == "table" then
                     if v.t == "Enum" then pcall(function() Settings[k] = Enum[v.e][v.n] end)
@@ -68,28 +64,22 @@ local function LoadConfig()
             end
         end
     end
-end
-LoadConfig()
+end)
 
----------------------------------------------------------
--- UI ИНТЕРФЕЙС И ГРАФИКА
----------------------------------------------------------
+-- [ UI FRAMEWORK ] --
 local SG = Instance.new("ScreenGui"); SG.Name = "oNex_Hub"; SG.Parent = CoreGui; SG.ResetOnSpawn = false
 local HUD = Instance.new("ScreenGui"); HUD.Name = "oNex_HUD"; HUD.Parent = CoreGui; HUD.ResetOnSpawn = false
 
--- FOV & Watermark
 local FOVCircle = Instance.new("Frame", HUD); FOVCircle.BackgroundTransparency = 1; FOVCircle.Visible = false
 local FOVStroke = Instance.new("UIStroke", FOVCircle); FOVStroke.Color = Color3.fromRGB(255, 255, 255); FOVStroke.Thickness = 1.5; FOVStroke.Transparency = 0.5
 Instance.new("UICorner", FOVCircle).CornerRadius = UDim.new(1, 0)
 
-local Watermark = Instance.new("Frame", HUD); Watermark.Size = UDim2.new(0, 0, 0, 26); Watermark.Position = UDim2.new(0, 15, 0, 15)
+local Watermark = Instance.new("Frame", HUD); Watermark.Size = UDim2.new(0, 300, 0, 26); Watermark.Position = UDim2.new(0, 15, 0, 15)
 Watermark.BackgroundColor3 = Color3.fromRGB(15, 15, 20); Watermark.BackgroundTransparency = 0.4
 Instance.new("UICorner", Watermark).CornerRadius = UDim.new(0, 6)
 local WMStroke = Instance.new("UIStroke", Watermark); WMStroke.Color = Color3.fromRGB(66, 135, 245); WMStroke.Transparency = 0.5; WMStroke.Thickness = 1
-
 local WMText = Instance.new("TextLabel", Watermark); WMText.Size = UDim2.new(1, -16, 1, 0); WMText.Position = UDim2.new(0, 8, 0, 0)
-WMText.BackgroundTransparency = 1; WMText.TextColor3 = Color3.fromRGB(255, 255, 255); WMText.Font = Enum.Font.GothamMedium; WMText.TextSize = 13
-WMText.TextXAlignment = Enum.TextXAlignment.Left; WMText.RichText = true; WMText.AutomaticSize = Enum.AutomaticSize.X
+WMText.BackgroundTransparency = 1; WMText.TextColor3 = Color3.fromRGB(255, 255, 255); WMText.Font = Enum.Font.GothamMedium; WMText.TextSize = 13; WMText.TextXAlignment = Enum.TextXAlignment.Left; WMText.RichText = true
 
 RunService.RenderStepped:Connect(function()
     WMText.Text = "<font color='#4287f5'>oNex</font> MM2 | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
@@ -104,7 +94,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Main GUI
 local Main = Instance.new("Frame", SG); Main.Size = UDim2.new(0, 640, 0, 460); Main.Position = UDim2.new(0.5, -320, 0.5, -230)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20); Main.BackgroundTransparency = 0.3; Main.Active = true; Main.Draggable = true
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
@@ -113,25 +102,16 @@ local MStroke = Instance.new("UIStroke", Main); MStroke.Color = Color3.fromRGB(6
 local Shadow = Instance.new("ImageLabel", Main); Shadow.Size = UDim2.new(1, 60, 1, 60); Shadow.Position = UDim2.new(0, -30, 0, -30)
 Shadow.BackgroundTransparency = 1; Shadow.Image = "rbxassetid://1316045217"; Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0); Shadow.ImageTransparency = 0.4; Shadow.ZIndex = -1
 
-local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 170, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
-Sidebar.BackgroundTransparency = 0.4; Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
-
-local Logo = Instance.new("TextLabel", Sidebar); Logo.Size = UDim2.new(1, 0, 0, 70); Logo.Position = UDim2.new(0, 20, 0, 10)
-Logo.RichText = true; Logo.Text = "<font color='#FFFFFF'>o</font><font color='#4287f5'>Nex</font>"; Logo.TextSize = 32; Logo.Font = Enum.Font.GothamBold; Logo.TextXAlignment = Enum.TextXAlignment.Left; Logo.BackgroundTransparency = 1
-
-local TabCont = Instance.new("Frame", Sidebar); TabCont.Size = UDim2.new(1, -20, 1, -90); TabCont.Position = UDim2.new(0, 10, 0, 80); TabCont.BackgroundTransparency = 1
-local TList = Instance.new("UIListLayout", TabCont); TList.Padding = UDim.new(0, 8)
-
+local Sidebar = Instance.new("Frame", Main); Sidebar.Size = UDim2.new(0, 170, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 14); Sidebar.BackgroundTransparency = 0.4; Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
+local Logo = Instance.new("TextLabel", Sidebar); Logo.Size = UDim2.new(1, 0, 0, 70); Logo.Position = UDim2.new(0, 20, 0, 10); Logo.RichText = true; Logo.Text = "<font color='#FFFFFF'>o</font><font color='#4287f5'>Nex</font>"; Logo.TextSize = 32; Logo.Font = Enum.Font.GothamBold; Logo.TextXAlignment = Enum.TextXAlignment.Left; Logo.BackgroundTransparency = 1
+local TabCont = Instance.new("Frame", Sidebar); TabCont.Size = UDim2.new(1, -20, 1, -90); TabCont.Position = UDim2.new(0, 10, 0, 80); TabCont.BackgroundTransparency = 1; local TList = Instance.new("UIListLayout", TabCont); TList.Padding = UDim.new(0, 8)
 local PageCont = Instance.new("Frame", Main); PageCont.Size = UDim2.new(1, -190, 1, -30); PageCont.Position = UDim2.new(0, 180, 0, 15); PageCont.BackgroundTransparency = 1
 local Pages, Tabs = {}, {}
 
-local function Tween(obj, props, time, style)
-    TweenService:Create(obj, TweenInfo.new(time or 0.2, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
-end
+local function Tween(obj, props, time, style) TweenService:Create(obj, TweenInfo.new(time or 0.2, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play() end
 
 local function CreatePage(name)
-    local P = Instance.new("ScrollingFrame", PageCont)
-    P.Size = UDim2.new(1, 0, 1, 0); P.BackgroundTransparency = 1; P.Visible = false; P.ScrollBarThickness = 2; P.ScrollBarImageColor3 = Color3.fromRGB(66, 135, 245); P.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    local P = Instance.new("ScrollingFrame", PageCont); P.Size = UDim2.new(1, 0, 1, 0); P.BackgroundTransparency = 1; P.Visible = false; P.ScrollBarThickness = 2; P.ScrollBarImageColor3 = Color3.fromRGB(66, 135, 245); P.AutomaticCanvasSize = Enum.AutomaticSize.Y
     local L = Instance.new("UIListLayout", P); L.Padding = UDim.new(0, 10); Instance.new("UIPadding", P).PaddingTop = UDim.new(0, 2); Instance.new("UIPadding", P).PaddingRight = UDim.new(0, 5)
     Pages[name] = P; return P
 end
@@ -140,13 +120,9 @@ local function SwitchTab(name)
     Settings.CurrentTab = name
     for n, p in pairs(Pages) do
         p.Visible = (n == name)
-        if p.Visible then
-            p.CanvasPosition = Vector2.new(0,0)
+        if p.Visible then p.CanvasPosition = Vector2.new(0,0)
             for _, child in ipairs(p:GetChildren()) do
-                if child:IsA("Frame") then
-                    local orig = child.Position; child.Position = child.Position + UDim2.new(0, 20, 0, 0); child.BackgroundTransparency = 1
-                    Tween(child, {Position = orig, BackgroundTransparency = 0.6}, 0.4, Enum.EasingStyle.Cubic)
-                end
+                if child:IsA("Frame") then local orig = child.Position; child.Position = child.Position + UDim2.new(0, 20, 0, 0); child.BackgroundTransparency = 1; Tween(child, {Position = orig, BackgroundTransparency = 0.6}, 0.4, Enum.EasingStyle.Cubic) end
             end
         end
     end
@@ -166,6 +142,7 @@ local function CreateTab(name)
     Tabs[name] = B
 end
 
+-- [ UI BUILDERS ] --
 local function CreateToggle(parent, text, key)
     local bindKey = key .. "Bind"
     local F = Instance.new("Frame", parent); F.Size = UDim2.new(1, -5, 0, 46); F.BackgroundColor3 = Color3.fromRGB(25, 25, 30); F.BackgroundTransparency = 0.6; Instance.new("UICorner", F).CornerRadius = UDim.new(0, 8)
@@ -214,12 +191,26 @@ local function CreateSlider(parent, text, min, max, key)
     end)
 end
 
+local function CreatePlayerCycle(parent, text, key)
+    local F = Instance.new("Frame", parent); F.Size = UDim2.new(1, -5, 0, 46); F.BackgroundColor3 = Color3.fromRGB(25, 25, 30); F.BackgroundTransparency = 0.6; Instance.new("UICorner", F).CornerRadius = UDim.new(0, 8)
+    local L = Instance.new("TextLabel", F); L.Size = UDim2.new(0.5, 0, 1, 0); L.Position = UDim2.new(0, 15, 0, 0); L.Text = text; L.TextColor3 = Color3.fromRGB(230, 230, 230); L.Font = Enum.Font.GothamMedium; L.TextSize = 14; L.TextXAlignment = Enum.TextXAlignment.Left; L.BackgroundTransparency = 1
+    local Btn = Instance.new("TextButton", F); Btn.Size = UDim2.new(0, 130, 0, 26); Btn.Position = UDim2.new(1, -145, 0, 10); Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50); Btn.Text = Settings[key] or "None"; Btn.TextColor3 = Color3.fromRGB(255, 255, 255); Btn.Font = Enum.Font.GothamBold; Btn.TextSize = 12; Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
+    Btn.MouseButton1Click:Connect(function()
+        local pls = Players:GetPlayers(); local names = {"None"}
+        for _, p in ipairs(pls) do if p ~= LocalPlayer then table.insert(names, p.Name) end end
+        local idx = 1
+        for i, n in ipairs(names) do if Settings[key] == n then idx = i; break end end
+        idx = idx + 1; if idx > #names then idx = 1 end
+        Settings[key] = names[idx]; Btn.Text = Settings[key]; SaveConfig()
+    end)
+end
+
 local function CreateAction(parent, text, cb)
     local B = Instance.new("TextButton", parent); B.Size = UDim2.new(1, -5, 0, 44); B.BackgroundColor3 = Color3.fromRGB(66, 135, 245); B.BackgroundTransparency = 0.2; B.Text = text; B.TextColor3 = Color3.fromRGB(255, 255, 255); B.Font = Enum.Font.GothamBold; B.TextSize = 14; Instance.new("UICorner", B).CornerRadius = UDim.new(0, 8)
     B.MouseButton1Click:Connect(function() Tween(B, {Size = UDim2.new(1, -11, 0, 40)}, 0.1); task.wait(0.1); Tween(B, {Size = UDim2.new(1, -5, 0, 44)}, 0.1, Enum.EasingStyle.Back); cb() end)
 end
 
--- HUD Активных Функций
+-- HUD 
 local HUDCont = Instance.new("Frame", HUD); HUDCont.Size = UDim2.new(0, 220, 1, -20); HUDCont.Position = UDim2.new(1, -230, 0, 0); HUDCont.BackgroundTransparency = 1
 local HList = Instance.new("UIListLayout", HUDCont); HList.VerticalAlignment = Enum.VerticalAlignment.Bottom; HList.Padding = UDim.new(0, 5)
 
@@ -227,24 +218,21 @@ local function UpdateHUD()
     for _, c in pairs(HUDCont:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end
     local bindsMap = {
         Aimlock="Aimlock", SilentAim="Silent Aim", NoSpread="NoSpread", AutoShoot="AutoShoot", 
-        InfJump="Inf Jump", Noclip="Noclip", SpeedHack="Speed", JumpHack="Jump", Spinbot="Spinbot"
+        InfJump="Inf Jump", Noclip="Noclip", SpeedHack="Speed", JumpHack="Jump", Spinbot="Spinbot", Fling="Рванка", AntiFling="Антирванка"
     }
     for key, name in pairs(bindsMap) do
         if Settings[key] then
-            local l = Instance.new("TextLabel", HUDCont); l.Size = UDim2.new(1, 0, 0, 22); l.BackgroundTransparency = 1; l.Text = "> " .. name .. " [ON]"
-            l.TextColor3 = Color3.fromRGB(66, 135, 245); l.Font = Enum.Font.GothamBold; l.TextSize = 14; l.TextXAlignment = Enum.TextXAlignment.Right
+            local l = Instance.new("TextLabel", HUDCont); l.Size = UDim2.new(1, 0, 0, 22); l.BackgroundTransparency = 1; l.Text = "> " .. name .. " [ON]"; l.TextColor3 = Color3.fromRGB(66, 135, 245); l.Font = Enum.Font.GothamBold; l.TextSize = 14; l.TextXAlignment = Enum.TextXAlignment.Right
             local st = Instance.new("UIStroke", l); st.Thickness = 1.2; st.Color = Color3.fromRGB(0,0,0)
         end
     end
 end
 
----------------------------------------------------------
--- ГЕНЕРАЦИЯ МЕНЮ
----------------------------------------------------------
-local Gen = CreatePage("General"); local Esp = CreatePage("ESP"); local Oth = CreatePage("Other")
-CreateTab("General"); CreateTab("ESP"); CreateTab("Other"); SwitchTab("General")
+-- [ TABS GENERATION ] --
+local Gen = CreatePage("General"); local Esp = CreatePage("ESP"); local Trl = CreatePage("Troll"); local Oth = CreatePage("Other")
+CreateTab("General"); CreateTab("ESP"); CreateTab("Troll"); CreateTab("Other"); SwitchTab("General")
 
--- General Tab (Combat & Movement)
+-- General
 CreateToggle(Gen, "Silent Aim (Невидимая наводка)", "SilentAim")
 CreateToggle(Gen, "NoSpread (Прыгай и стреляй ровно)", "NoSpread")
 CreateToggle(Gen, "Aimlock (Прицел липнет к цели)", "Aimlock")
@@ -258,11 +246,16 @@ CreateToggle(Gen, "SpeedHack", "SpeedHack"); CreateSlider(Gen, "Скорость
 CreateToggle(Gen, "JumpHack", "JumpHack"); CreateSlider(Gen, "Прыжок", 50, 200, "JumpPower")
 CreateToggle(Gen, "Spinbot", "Spinbot"); CreateSlider(Gen, "Скорость вращения", 10, 150, "SpinSpeed")
 
--- ESP Tab
+-- ESP
 CreateToggle(Esp, "Убийца (Murderer)", "MurdESP"); CreateToggle(Esp, "Шериф (Sheriff)", "SheriffESP"); CreateToggle(Esp, "Мирные (Innocent)", "InnocentESP")
 CreateToggle(Esp, "Оружие (Gun Drop)", "GunESP"); CreateToggle(Esp, "Никнеймы", "NamesESP")
 
--- Other Tab
+-- Troll
+CreatePlayerCycle(Trl, "Цель для Рванки", "FlingTarget")
+CreateToggle(Trl, "Рванка (Fling)", "Fling")
+CreateToggle(Trl, "Антирванка (Anti-Fling)", "AntiFling")
+
+-- Other
 local mf = Instance.new("Frame", Oth); mf.Size = UDim2.new(1, -5, 0, 46); mf.BackgroundColor3 = Color3.fromRGB(25, 25, 30); mf.BackgroundTransparency=0.6; Instance.new("UICorner", mf).CornerRadius = UDim.new(0, 8)
 local ml = Instance.new("TextLabel", mf); ml.Size = UDim2.new(0.6,0,1,0); ml.Position = UDim2.new(0,15,0,0); ml.Text = "Скрыть/Показать Меню"; ml.TextColor3 = Color3.fromRGB(230,230,230); ml.Font = Enum.Font.GothamMedium; ml.TextSize=14; ml.TextXAlignment = Enum.TextXAlignment.Left; ml.BackgroundTransparency=1
 local mb = Instance.new("TextButton", mf); mb.Size = UDim2.new(0,90,0,24); mb.Position = UDim2.new(1,-105,0,11); mb.BackgroundColor3 = Color3.fromRGB(35,35,40); mb.Text = "["..Settings.MenuBind.Name.."]"; mb.TextColor3 = Color3.fromRGB(66, 135, 245); mb.Font=Enum.Font.Gotham; mb.TextSize=12; Instance.new("UICorner", mb).CornerRadius=UDim.new(0,4)
@@ -277,57 +270,35 @@ UserInputService.InputBegan:Connect(function(i)
     end
 end)
 
-CreateAction(Oth, "💾 Сохранить настройки (Save Config)", function() SaveConfig() end)
-CreateAction(Oth, "🔥 ВКЛЮЧИТЬ MAX COMPETITIVE MODE", function()
-    Settings.SpeedHack = true; Settings.WalkSpeed = 100
-    Settings.JumpHack = true; Settings.JumpPower = 100
-    Settings.Spinbot = true; Settings.SpinSpeed = 100
-    Settings.AutoShoot = true; Settings.SilentAim = true; Settings.NoSpread = true
-    Settings.Aimlock = true; Settings.InfJump = true; Settings.Noclip = true
-    Settings.AutoGun = true; Settings.DrawFOV = true
-    Settings.MurdESP = true; Settings.SheriffESP = true; Settings.GunESP = true
-    SaveConfig(); SwitchTab("General") 
-end)
+CreateAction(Oth, "💾 Сохранить настройки", function() SaveConfig() end)
+local Info = Instance.new("TextLabel", Oth); Info.Size = UDim2.new(1, 0, 0, 50); Info.BackgroundTransparency = 1; Info.Text = "oNex Hub v7.0 MAX\nРазработчик: cawiworld"; Info.TextColor3 = Color3.fromRGB(100, 100, 100); Info.Font = Enum.Font.Gotham; Info.TextSize = 12
 
-local Info = Instance.new("TextLabel", Oth); Info.Size = UDim2.new(1, 0, 0, 50); Info.BackgroundTransparency = 1
-Info.Text = "oNex Hub v6.0 COMPETITIVE\nРазработчик: cawiworld"; Info.TextColor3 = Color3.fromRGB(100, 100, 100); Info.Font = Enum.Font.Gotham; Info.TextSize = 12
-
----------------------------------------------------------
--- ЛОГИКА ЧИТА (GLOBAL TARGETING + BYPASS)
----------------------------------------------------------
-local rayParams = RaycastParams.new()
-rayParams.FilterType = Enum.RaycastFilterType.Exclude
+-- [ LOGIC CORE ] --
+local rayParams = RaycastParams.new(); rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
 local function IsVisible(targetPart)
     local char = LocalPlayer.Character
     if not char or not targetPart then return false end
     rayParams.FilterDescendantsInstances = {char}
-    local origin = Camera.CFrame.Position
-    local result = Workspace:Raycast(origin, (targetPart.Position - origin), rayParams)
+    local result = Workspace:Raycast(Camera.CFrame.Position, (targetPart.Position - Camera.CFrame.Position), rayParams)
     return not result or result.Instance:IsDescendantOf(targetPart.Parent)
 end
 
--- Единая система таргетинга (Оптимизировано)
 local function GetSmartTarget()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
-    local mPos = UserInputService:GetMouseLocation()
-    local tgt, minD = nil, math.huge
+    local mPos = UserInputService:GetMouseLocation(); local tgt, minD = nil, math.huge
     
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = p.Character.HumanoidRootPart
             local isMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
-            
             if isMeMurd or (not isMeMurd and isMurd) then
-                if not IsVisible(hrp) then continue end
-                local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                if not IsVisible(p.Character.HumanoidRootPart) then continue end
+                local screenPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
                 if onScreen then
                     local dist = (Vector2.new(screenPos.X, screenPos.Y) - mPos).Magnitude
-                    if dist <= Settings.FOV and dist < minD then
-                        minD = dist; tgt = p
-                    end
+                    if dist <= Settings.FOV and dist < minD then minD = dist; tgt = p end
                 end
             end
         end
@@ -335,7 +306,6 @@ local function GetSmartTarget()
     return tgt
 end
 
--- Инфинит Джамп (Infinite Jump)
 UserInputService.JumpRequest:Connect(function()
     if Settings.InfJump and LocalPlayer.Character then
         local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -345,10 +315,22 @@ end)
 
 RunService.Stepped:Connect(function()
     if Settings.Noclip and LocalPlayer.Character then
-        local parts = {"Head", "UpperTorso", "LowerTorso", "Torso", "HumanoidRootPart"}
-        for _, n in pairs(parts) do
-            local p = LocalPlayer.Character:FindFirstChild(n)
-            if p and p:IsA("BasePart") then p.CanCollide = false end
+        for _, p in pairs(LocalPlayer.Character:GetDescendants()) do
+            if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then p.CanCollide = false end
+        end
+    end
+    
+    -- Anti-Fling (Антирванка)
+    if Settings.AntiFling then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                for _, v in pairs(p.Character:GetDescendants()) do
+                    if v:IsA("BasePart") then
+                        v.CanCollide = false
+                        if v.Velocity.Magnitude > 50 then v.Velocity = Vector3.zero; v.RotVelocity = Vector3.zero end
+                    end
+                end
+            end
         end
     end
 end)
@@ -356,22 +338,15 @@ end)
 local shootDebounce = false
 RunService.RenderStepped:Connect(function()
     UpdateHUD()
-    -- Обновляем Глобальный Таргет каждый кадр
-    if Settings.SilentAim or Settings.Aimlock or Settings.AutoShoot or Settings.NoSpread then
-        CurrentTarget = GetSmartTarget()
-    else
-        CurrentTarget = nil
-    end
-
+    if Settings.SilentAim or Settings.Aimlock or Settings.AutoShoot or Settings.NoSpread then CurrentTarget = GetSmartTarget() else CurrentTarget = nil end
     local char = LocalPlayer.Character
     if not char then return end
-    
     local hum = char:FindFirstChildOfClass("Humanoid")
     local hrp = char:FindFirstChild("HumanoidRootPart")
     
     -- Aimlock
     if Settings.Aimlock and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, CurrentTarget.Character.HumanoidRootPart.Position)
+        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, CurrentTarget.Character.HumanoidRootPart.Position)
     end
     
     if hum then
@@ -381,10 +356,10 @@ RunService.RenderStepped:Connect(function()
     
     if hrp then
         local bav = hrp:FindFirstChild("oNexSpin")
-        if Settings.Spinbot then
+        if Settings.Spinbot and not Settings.Fling then
             if not bav then bav = Instance.new("BodyAngularVelocity", hrp); bav.Name = "oNexSpin"; bav.MaxTorque = Vector3.new(0, math.huge, 0) end
             bav.AngularVelocity = Vector3.new(0, Settings.SpinSpeed, 0)
-        elseif bav then bav:Destroy() end
+        elseif not Settings.Fling and bav then bav:Destroy() end
     end
     
     if Settings.AutoGun and hrp then
@@ -392,15 +367,25 @@ RunService.RenderStepped:Connect(function()
         if gDrop then hrp.CFrame = gDrop.CFrame end
     end
     
-    -- AutoShoot (Triggerbot)
+    -- Fling (Рванка)
+    if Settings.Fling and hrp then
+        local tgtP = Players:FindFirstChild(Settings.FlingTarget)
+        if tgtP and tgtP.Character and tgtP.Character:FindFirstChild("HumanoidRootPart") then
+            local bav = hrp:FindFirstChild("oNexSpin")
+            if not bav then bav = Instance.new("BodyAngularVelocity", hrp); bav.Name = "oNexSpin"; bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) end
+            bav.AngularVelocity = Vector3.new(10000, 10000, 10000)
+            hrp.CFrame = tgtP.Character.HumanoidRootPart.CFrame * CFrame.new(math.random(-1,1), math.random(-1,1), math.random(-1,1))
+            for _, p in ipairs(char:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end
+        end
+    end
+    
+    -- AutoShoot
     if Settings.AutoShoot and not shootDebounce and CurrentTarget and CurrentTarget.Character then
         local t = char:FindFirstChildOfClass("Tool")
         if t and (t.Name == "Gun" or t.Name == "Knife") then
             local dist = (CurrentTarget.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
             if (t.Name == "Gun") or (t.Name == "Knife" and dist <= 12) then
-                shootDebounce = true
-                t:Activate()
-                task.delay(0.5, function() shootDebounce = false end)
+                shootDebounce = true; t:Activate(); task.delay(0.5, function() shootDebounce = false end)
             end
         end
     end
@@ -440,9 +425,7 @@ RunService.RenderStepped:Connect(function()
     elseif gDropESP and gDropESP:FindFirstChild("oNexGun") then gDropESP.oNexGun:Destroy() end
 end)
 
----------------------------------------------------------
--- ДВОЙНОЙ ХУК (SilentAim + NoSpread)
----------------------------------------------------------
+-- [ HOOKS ] --
 local oldIdx; oldIdx = hookmetamethod(game, "__index", function(self, key)
     if not checkcaller() and Settings.SilentAim and typeof(self) == "Instance" and self:IsA("PlayerMouse") then
         if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
@@ -454,15 +437,11 @@ local oldIdx; oldIdx = hookmetamethod(game, "__index", function(self, key)
 end)
 
 local oldNamecall; oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local method = getnamecallmethod()
     local args = {...}
+    local method = getnamecallmethod()
     
     if not checkcaller() and (Settings.SilentAim or Settings.NoSpread) and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        -- Подменяем любые лучи (сводит Spread оружия в абсолютный 0)
-        if method == "Raycast" then
-            args[2] = (CurrentTarget.Character.HumanoidRootPart.Position - args[1]).Unit * 1000
-            return oldNamecall(self, unpack(args))
-        elseif method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" or method == "FindPartOnRay" then
+        if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" or method == "FindPartOnRay" then
             args[1] = Ray.new(args[1].Origin, (CurrentTarget.Character.HumanoidRootPart.Position - args[1].Origin).Unit * 1000)
             return oldNamecall(self, unpack(args))
         end
