@@ -31,17 +31,21 @@ local Settings = {
     ESPFont = Enum.Font.GothamBold
 }
 
--- Config System
+-- Config System (Исправлено)
 local cfgName = "oNex_MM2_Config.json"
 local function SaveConfig()
     if writefile then
         local save = {}
         for k, v in pairs(Settings) do
-            if typeof(v) == "EnumItem" then save[k] = {t = "Key", n = v.Name}
-            elseif typeof(v) == "Color3" then save[k] = {t = "Col", r = v.R, g = v.G, b = v.B}
-            else save[k] = v end
+            if typeof(v) == "EnumItem" then 
+                save[k] = {t = "Enum", e = tostring(v.EnumType), n = v.Name}
+            elseif typeof(v) == "Color3" then 
+                save[k] = {t = "Col", r = v.R, g = v.G, b = v.B}
+            else 
+                save[k] = v 
+            end
         end
-        writefile(cfgName, HttpService:JSONEncode(save))
+        pcall(function() writefile(cfgName, HttpService:JSONEncode(save)) end)
     end
 end
 
@@ -50,9 +54,19 @@ local function LoadConfig()
         local s, res = pcall(function() return HttpService:JSONDecode(readfile(cfgName)) end)
         if s and type(res) == "table" then
             for k, v in pairs(res) do
-                if type(v) == "table" and v.t == "Key" then Settings[k] = Enum.KeyCode[v.n] or Enum.KeyCode.Unknown
-                elseif type(v) == "table" and v.t == "Col" then Settings[k] = Color3.new(v.r, v.g, v.b)
-                else Settings[k] = v end
+                if type(v) == "table" then
+                    if v.t == "Enum" then
+                        local ok, enumVal = pcall(function() return Enum[v.e][v.n] end)
+                        if ok then Settings[k] = enumVal end
+                    elseif v.t == "Key" then -- Поддержка старых сломанных конфигов
+                        local ok, enumVal = pcall(function() return Enum.KeyCode[v.n] end)
+                        if ok then Settings[k] = enumVal end
+                    elseif v.t == "Col" then 
+                        Settings[k] = Color3.new(v.r, v.g, v.b) 
+                    end
+                else 
+                    if Settings[k] ~= nil then Settings[k] = v end
+                end
             end
         end
     end
@@ -95,7 +109,6 @@ PageCont.Size = UDim2.new(1, -180, 1, -30); PageCont.Position = UDim2.new(0, 170
 
 local Pages, Tabs = {}, {}
 
--- Tween Helpers
 local function Tween(obj, props, time, style)
     TweenService:Create(obj, TweenInfo.new(time or 0.2, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
 end
@@ -174,10 +187,13 @@ local function CreateToggle(parent, text, key)
     BBg.Size = UDim2.new(0, 45, 0, 20); BBg.Position = UDim2.new(1, -110, 0, 13)
     BBg.BackgroundColor3 = Color3.fromRGB(35, 35, 40); BBg.Text = Settings[bindKey] == Enum.KeyCode.Unknown and "[None]" or "["..Settings[bindKey].Name.."]"
     BBg.TextColor3 = Color3.fromRGB(150, 150, 150); BBg.Font = Enum.Font.Gotham; BBg.TextSize = 11
+    BBg.ZIndex = 2 -- Поверх основной кнопки
     Instance.new("UICorner", BBg).CornerRadius = UDim.new(0, 4)
     
+    -- Исправленный хитбокс
     local Btn = Instance.new("TextButton", F)
-    Btn.Size = UDim2.new(1, -120, 1, 0); Btn.BackgroundTransparency = 1; Btn.Text = ""
+    Btn.Size = UDim2.new(1, 0, 1, 0); Btn.BackgroundTransparency = 1; Btn.Text = ""
+    Btn.ZIndex = 1
     
     local function UpdateVis()
         Tween(Bg, {BackgroundColor3 = Settings[key] and Color3.fromRGB(66, 135, 245) or Color3.fromRGB(45, 45, 50)}, 0.25)
@@ -228,8 +244,9 @@ local function CreateSlider(parent, text, min, max, key)
     Glow.Size = UDim2.new(0, 14, 0, 14); Glow.Position = UDim2.new(1, -7, 0.5, -7)
     Glow.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Instance.new("UICorner", Glow).CornerRadius = UDim.new(1, 0)
     
-    local Btn = Instance.new("TextButton", Bar)
-    Btn.Size = UDim2.new(1, 0, 1, 0); Btn.BackgroundTransparency = 1; Btn.Text = ""
+    -- Исправленный хитбокс (кнопка на весь фрейм)
+    local Btn = Instance.new("TextButton", F)
+    Btn.Size = UDim2.new(1, 0, 1, 0); Btn.BackgroundTransparency = 1; Btn.Text = ""; Btn.ZIndex = 2
     
     local drag = false
     Btn.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = true end end)
@@ -327,11 +344,14 @@ CreateAction(Oth, "🔥 ВКЛЮЧИТЬ MAX MODE", function()
     Settings.AutoShoot = true; Settings.SilentAim = true; Settings.Noclip = true
     Settings.MurdESP = true; Settings.SheriffESP = true; Settings.GunESP = true
     SaveConfig(); UpdateHUD()
+    -- Визуальное обновление ползунков
+    for _, btn in pairs(Tabs) do Tween(btn, {BackgroundTransparency = 1}, 0.1) end
+    SwitchTab("General") 
 end)
 
 local Info = Instance.new("TextLabel", Oth)
 Info.Size = UDim2.new(1, 0, 0, 50); Info.BackgroundTransparency = 1
-Info.Text = "oNex Hub v4.0 MAX\nРазработчик: cawiworld"; Info.TextColor3 = Color3.fromRGB(100, 100, 100)
+Info.Text = "oNex Hub v4.1 MAX\nРазработчик: cawiworld"; Info.TextColor3 = Color3.fromRGB(100, 100, 100)
 Info.Font = Enum.Font.Gotham; Info.TextSize = 12
 
 -- Logic Core
