@@ -10,21 +10,29 @@ if CoreGui:FindFirstChild("oNex_Hub") then
     CoreGui.oNex_Hub:Destroy()
 end
 
--- Настройки чита (по умолчанию)
 local Settings = {
-    -- Тэбы и интерфейс
     Visible = true,
     CurrentTab = "General",
-    MenuKeybind = Enum.KeyCode.RightControl, -- Кнопка для бинда (по умолчанию)
+    MenuKeybind = Enum.KeyCode.RightControl,
     
-    -- ESP Настройки
+    Noclip = false,
+    SpeedEnabled = false,
+    WalkSpeed = 16,
+    JumpEnabled = false,
+    JumpPower = 50,
+    Spinbot = false,
+    SpinSpeed = 20,
+    SpinBind = Enum.KeyCode.C,
+    AutoShoot = false,
+    ShootBind = Enum.KeyCode.V,
+    SilentAim = false,
+    
     MurdESP = true,
     SheriffESP = true,
     InnocentESP = false,
     GunESP = true,
     NamesESP = true,
     
-    -- Кастомизация ESP
     ESPFont = Enum.Font.GothamBold,
     MurdColor = Color3.fromRGB(255, 50, 50),
     SheriffColor = Color3.fromRGB(50, 120, 255),
@@ -128,8 +136,8 @@ TabHighlight.Size = UDim2.new(1, 0, 0, 36)
 TabHighlight.Position = UDim2.new(0, 0, 0, 0)
 TabHighlight.BackgroundColor3 = Color3.fromRGB(50, 120, 255)
 TabHighlight.BackgroundTransparency = 0.8
-TabHighlight.Visible = false -- Скрыт до клика
-TabHighlight.Parent = TabButtonsContainer
+TabHighlight.Visible = false 
+TabHighlight.Parent = SideBar
 
 local HighlightCorner = Instance.new("UICorner")
 HighlightCorner.CornerRadius = UDim.new(0, 6)
@@ -185,17 +193,16 @@ local Pages = {
     Other = OthPage,
 }
 
--- Функция переключения вкладок с «сочной» анимацией переезда
 local function SwitchTab(tabName, button)
     Settings.CurrentTab = tabName
     
-    -- Переезд прямоугольника-подсветки
     TabHighlight.Visible = true
+    local targetY = button.AbsolutePosition.Y - SideBar.AbsolutePosition.Y
+    
     TweenService:Create(TabHighlight, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0, 0, 0, button.Position.Y.Offset)
+        Position = UDim2.new(0, 5, 0, targetY)
     }):Play()
     
-    -- Обновление видимости страниц и цвета кнопок
     for name, page in pairs(Pages) do
         page.Visible = (name == tabName)
     end
@@ -505,15 +512,78 @@ local function CreateCycleButton(parent, text, options, defaultIndex, callback)
     end)
 end
 
+-- 4. Элемент Бинда (Keybind)
+local function CreateBind(parent, text, settingName, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -10, 0, 42)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    Frame.BackgroundTransparency = 0.6
+    Frame.Parent = parent
+    
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 8)
+    Corner.Parent = Frame
+    
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0.6, 0, 1, 0)
+    Label.Position = UDim2.new(0, 12, 0, 0)
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.BackgroundTransparency = 1
+    Label.Parent = Frame
+    
+    local BindBtn = Instance.new("TextButton")
+    BindBtn.Size = UDim2.new(0, 80, 0, 28)
+    BindBtn.Position = UDim2.new(1, -90, 0, 7)
+    BindBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    BindBtn.Text = Settings[settingName].Name
+    BindBtn.TextColor3 = Color3.fromRGB(50, 120, 255)
+    BindBtn.Font = Enum.Font.GothamBold
+    BindBtn.TextSize = 13
+    BindBtn.Parent = Frame
+    
+    local BCorner = Instance.new("UICorner")
+    BCorner.CornerRadius = UDim.new(0, 6)
+    BCorner.Parent = BindBtn
+    
+    local isListening = false
+    BindBtn.MouseButton1Click:Connect(function()
+        isListening = true
+        BindBtn.Text = "..."
+    end)
+    
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if isListening and input.UserInputType == Enum.UserInputType.Keyboard then
+            Settings[settingName] = input.KeyCode
+            BindBtn.Text = input.KeyCode.Name
+            isListening = false
+            if callback then callback(input.KeyCode) end
+        end
+    end)
+end
 
 --- [[[ НАПОЛНЕНИЕ ВКЛАДОК oNex 2.0 ]]] ---
 
--- 1. Вкладка: GENERAL (Анимированные заготовки)
-CreateToggle(GenPage, "Автоферма (Test Auto Farm)", "Test1")
-CreateToggle(GenPage, "Автопокупка (Test Buy)", "Test2")
-CreateSlider(GenPage, "Тестовая скорость (WS)", 16, 120, 16)
-CreateSlider(GenPage, "Тестовый прыжок (JP)", 50, 180, 50)
-CreateCycleButton(GenPage, "Режим автофермы (Test Cycle)", {"Ближний", "Далёкий", "Случайный"}, 1)
+-- 1. Вкладка: GENERAL (Movement & Combat)
+CreateToggle(GenPage, "Noclip", "Noclip")
+
+CreateToggle(GenPage, "SpeedHack", "SpeedEnabled")
+CreateSlider(GenPage, "Настройка скорости", 16, 150, 16, function(val) Settings.WalkSpeed = val end)
+
+CreateToggle(GenPage, "JumpHack", "JumpEnabled")
+CreateSlider(GenPage, "Настройка прыжка", 50, 250, 50, function(val) Settings.JumpPower = val end)
+
+CreateToggle(GenPage, "Silent Aim (Револьвер)", "SilentAim")
+
+CreateToggle(GenPage, "AutoShoot (Оба оружия)", "AutoShoot")
+CreateBind(GenPage, "Бинд AutoShoot", "ShootBind")
+
+CreateToggle(GenPage, "SpinBot", "Spinbot")
+CreateSlider(GenPage, "Скорость SpinBot", 10, 100, 20, function(val) Settings.SpinSpeed = val end)
+CreateBind(GenPage, "Бинд SpinBot", "SpinBind")
 
 -- 2. Вкладка: ESP (Наши функции + Улучшенные настройки)
 CreateToggle(ESPPage, "Показывать Убийцу (Murderer)", "MurdESP")
@@ -719,4 +789,92 @@ RunService.Heartbeat:Connect(function()
     elseif gunDrop and gunDrop:FindFirstChild("oNex_GunHL") then
         gunDrop.oNex_GunHL:Destroy()
     end
+end)
+
+--- [[[ ЛОГИКА GENERAL ФУНКЦИЙ ]]] ---
+
+-- Функция поиска Убийцы для сайлент айма
+local function GetMurderer()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= Players.LocalPlayer and p.Character then
+            local bp = p:FindFirstChild("Backpack")
+            if (bp and bp:FindFirstChild("Knife")) or p.Character:FindFirstChild("Knife") then
+                return p
+            end
+        end
+    end
+    return nil
+end
+
+-- Обработка биндов для включения/выключения
+UserInputService.InputBegan:Connect(function(input, gp)
+    if not gp then
+        if input.KeyCode == Settings.SpinBind then
+            Settings.Spinbot = not Settings.Spinbot
+        elseif input.KeyCode == Settings.ShootBind then
+            Settings.AutoShoot = not Settings.AutoShoot
+        end
+    end
+end)
+
+-- Noclip (Срабатывает до просчета физики, чтобы не дергало)
+RunService.Stepped:Connect(function()
+    local char = Players.LocalPlayer.Character
+    if char and Settings.Noclip then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide and part.Name ~= "HumanoidRootPart" then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- WalkSpeed, JumpPower, Spinbot и AutoShoot
+RunService.Heartbeat:Connect(function()
+    local char = Players.LocalPlayer.Character
+    if not char then return end
+    
+    local hum = char:FindFirstChild("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    
+    -- Обход сброса скорости в MM2
+    if hum then
+        if Settings.SpeedEnabled then hum.WalkSpeed = Settings.WalkSpeed end
+        if Settings.JumpEnabled then hum.JumpPower = Settings.JumpPower end
+    end
+    
+    -- Спинбот (Крутим HumanoidRootPart)
+    if hrp and Settings.Spinbot then
+        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(Settings.SpinSpeed), 0)
+    end
+    
+    -- AutoShoot: Автоматическая активация оружия, если оно в руках
+    if Settings.AutoShoot then
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool and (tool.Name == "Gun" or tool.Name == "Knife") then
+            local target = GetMurderer()
+            -- Бьем только если цель найдена (для гана сайлент аим сам наведется)
+            if target and target.Character then
+                tool:Activate()
+            end
+        end
+    end
+end)
+
+-- Silent Aim (Подмена позиции мыши для Револьвера через Hook)
+local oldIndex
+oldIndex = hookmetamethod(game, "__index", function(self, key)
+    if not checkcaller() and Settings.SilentAim and self:IsA("PlayerMouse") then
+        if key == "Hit" or key == "Target" then
+            local target = GetMurderer()
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                if key == "Hit" then
+                    return target.Character.HumanoidRootPart.CFrame
+                elseif key == "Target" then
+                    return target.Character.HumanoidRootPart
+                end
+            end
+        end
+    end
+    return oldIndex(self, key)
 end)
