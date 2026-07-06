@@ -307,7 +307,7 @@ local Oth = CreatePage("Other")
 CreateTab("General"); CreateTab("ESP"); CreateTab("Other"); SwitchTab("General")
 
 -- General Tab
-CreateToggle(Gen, "Noclip (Сквозь стены)", "Noclip")
+CreateToggle(Gen, "Noclip", "Noclip")
 CreateToggle(Gen, "SpeedHack", "SpeedHack"); CreateSlider(Gen, "Скорость", 16, 150, "WalkSpeed")
 CreateToggle(Gen, "JumpHack", "JumpHack"); CreateSlider(Gen, "Прыжок", 50, 200, "JumpPower")
 CreateToggle(Gen, "Silent Aim", "SilentAim")
@@ -336,8 +336,8 @@ UserInputService.InputBegan:Connect(function(i)
     end
 end)
 
-CreateAction(Oth, "💾 Сохранить настройки (Save Config)", function() SaveConfig() end)
-CreateAction(Oth, "🔥 ВКЛЮЧИТЬ MAX MODE", function()
+CreateAction(Oth, "Сохранить настройки", function() SaveConfig() end)
+CreateAction(Oth, "Включить MAX MODE", function()
     Settings.SpeedHack = true; Settings.WalkSpeed = 100
     Settings.JumpHack = true; Settings.JumpPower = 120
     Settings.Spinbot = true; Settings.SpinSpeed = 100
@@ -351,7 +351,7 @@ end)
 
 local Info = Instance.new("TextLabel", Oth)
 Info.Size = UDim2.new(1, 0, 0, 50); Info.BackgroundTransparency = 1
-Info.Text = "oNex Hub v4.1 MAX\nРазработчик: cawiworld"; Info.TextColor3 = Color3.fromRGB(100, 100, 100)
+Info.Text = "oNex v1.1\nРазработчик: cawiworld"; Info.TextColor3 = Color3.fromRGB(100, 100, 100)
 Info.Font = Enum.Font.Gotham; Info.TextSize = 12
 
 -- Logic Core
