@@ -564,11 +564,13 @@ end)
 -- [ GENERATE TABS ]
 local Gen = CreatePage("General")
 local Esp = CreatePage("ESP")
+local Wld = CreatePage("World")
 local Trl = CreatePage("Troll")
 local Oth = CreatePage("Other")
 
 CreateTab("General")
 CreateTab("ESP")
+CreateTab("World")
 CreateTab("Troll")
 CreateTab("Other")
 SwitchTab("General")
@@ -598,6 +600,14 @@ CreateToggle(Esp, "Nightmode (Ночь)", "Nightmode")
 CreatePlayerCycle(Trl, "Цель для Рванки", "FlingTarget")
 CreateToggle(Trl, "Рванка (Fling)", "Fling")
 CreateToggle(Trl, "Антирванка (Anti-Fling)", "AntiFling")
+
+CreateToggle(Wld, "Nightmode", "Nightmode")
+CreateToggle(Wld, "FullBright", "FullBright")
+CreateToggle(Wld, "Убрать тени", "NoShadows")
+
+if Settings.FullBright == nil then Settings.FullBright = false end
+if Settings.NoShadows == nil then Settings.NoShadows = false end
+OriginalLighting.GlobalShadows = Lighting.GlobalShadows
 
 local mf = Instance.new("Frame")
 mf.Size = UDim2.new(1, -5, 0, 46)
@@ -758,14 +768,21 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
+local wasNoclip = false
 RunService.Stepped:Connect(function()
     if Settings.Noclip and LocalPlayer.Character then
+        wasNoclip = true
         local parts = {"Head", "UpperTorso", "LowerTorso", "Torso", "HumanoidRootPart"}
         for _, partName in pairs(parts) do
             local p = LocalPlayer.Character:FindFirstChild(partName)
-            if p and p:IsA("BasePart") then 
-                p.CanCollide = false 
-            end
+            if p and p:IsA("BasePart") then p.CanCollide = false end
+        end
+    elseif wasNoclip and LocalPlayer.Character then
+        wasNoclip = false
+        local parts = {"Head", "UpperTorso", "LowerTorso", "Torso", "HumanoidRootPart"}
+        for _, partName in pairs(parts) do
+            local p = LocalPlayer.Character:FindFirstChild(partName)
+            if p and p:IsA("BasePart") then p.CanCollide = true end
         end
     end
     
@@ -773,11 +790,8 @@ RunService.Stepped:Connect(function()
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
                 for _, v in pairs(p.Character:GetDescendants()) do
-                    if v:IsA("BasePart") then
-                        if v.Velocity.Magnitude > 100 then 
-                            v.Velocity = Vector3.zero
-                            v.RotVelocity = Vector3.zero 
-                        end
+                    if v:IsA("BasePart") and v.Velocity.Magnitude > 100 then 
+                        v.Velocity = Vector3.zero; v.RotVelocity = Vector3.zero 
                     end
                 end
             end
@@ -789,19 +803,31 @@ local shootDebounce = false
 
 RunService.RenderStepped:Connect(function()
     UpdateHUD()
-
-    if Settings.Nightmode then
-        Lighting.TimeOfDay = "00:00:00"
-        Lighting.Ambient = Color3.fromRGB(15, 15, 20)
-        Lighting.OutdoorAmbient = Color3.fromRGB(15, 15, 20)
+    WMText.Text = "<font color='#4287f5'>one.hvh</font> MM2 | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
+    Watermark.Size = UDim2.new(0, WMText.TextBounds.X + 16, 0, 26)
+    
+    if Settings.DrawFOV then
+        local mPos = UserInputService:GetMouseLocation()
+        FOVCircle.Size = UDim2.new(0, Settings.FOV * 2, 0, Settings.FOV * 2)
+        FOVCircle.Position = UDim2.new(0, mPos.X - Settings.FOV, 0, mPos.Y - Settings.FOV)
+        FOVCircle.Visible = true
     else
-        Lighting.TimeOfDay = OriginalLighting.TimeOfDay
-        Lighting.Ambient = OriginalLighting.Ambient
-        Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
+        FOVCircle.Visible = false
     end
 
-    if Settings.SilentAim or Settings.Aimlock or Settings.AutoShoot or Settings.NoSpread then 
-        CurrentTarget = GetSmartTarget(false)
+    if Settings.Nightmode then
+        Lighting.TimeOfDay = "00:00:00"; Lighting.Ambient = Color3.fromRGB(15, 15, 20); Lighting.OutdoorAmbient = Color3.fromRGB(15, 15, 20)
+    elseif Settings.FullBright then
+        Lighting.TimeOfDay = "12:00:00"; Lighting.Ambient = Color3.fromRGB(255, 255, 255); Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+    else
+        Lighting.TimeOfDay = OriginalLighting.TimeOfDay; Lighting.Ambient = OriginalLighting.Ambient; Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
+    end
+    Lighting.GlobalShadows = not Settings.NoShadows
+
+    if Settings.Aimlock then
+        CurrentTarget = GetSmartTarget(true) 
+    elseif Settings.SilentAim or Settings.AutoShoot or Settings.NoSpread then 
+        CurrentTarget = GetSmartTarget(false) 
     else 
         CurrentTarget = nil 
     end
@@ -891,21 +917,19 @@ RunService.RenderStepped:Connect(function()
     
     if Settings.AutoShoot and not shootDebounce and CurrentTarget and CurrentTarget.Character then
         local t = char:FindFirstChildOfClass("Tool")
-        if t and (t.Name == "Gun" or t.Name == "Knife") and not isPeeking then
+        if t and (t.Name == "Gun" or t.Name == "Knife") then
             local dist = (CurrentTarget.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            
             if t.Name == "Gun" then
                 shootDebounce = true
-                task.wait(0.1)
-                if CurrentTarget and CurrentTarget.Character and IsVisible(CurrentTarget.Character:FindFirstChild("Head")) then
+                task.wait(0.05)
+                if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") and IsVisible(CurrentTarget.Character.Head) then
                     t:Activate()
                 end
-                task.delay(0.4, function() shootDebounce = false end)
-                
+                task.delay(0.3, function() shootDebounce = false end)
             elseif t.Name == "Knife" and dist <= 15 then
                 shootDebounce = true
                 t:Activate()
-                task.delay(0.4, function() shootDebounce = false end)
+                task.delay(0.3, function() shootDebounce = false end)
             end
         end
     end
@@ -981,13 +1005,12 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- [ HOOKS ]
 local oldIdx
 oldIdx = hookmetamethod(game, "__index", function(self, key)
     if not checkcaller() and Settings.SilentAim and typeof(self) == "Instance" and self:IsA("PlayerMouse") then
-        if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-            if key == "Hit" then return CurrentTarget.Character.HumanoidRootPart.CFrame end
-            if key == "Target" then return CurrentTarget.Character.HumanoidRootPart end
+        if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
+            if key == "Hit" then return CurrentTarget.Character.Head.CFrame end
+            if key == "Target" then return CurrentTarget.Character.Head end
         end
     end
     return oldIdx(self, key)
@@ -998,13 +1021,12 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local args = {...}
     local method = getnamecallmethod()
     
-    if not checkcaller() and (Settings.SilentAim or Settings.NoSpread) and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        local targetPos = CurrentTarget.Character.HumanoidRootPart.Position
+    if not checkcaller() and (Settings.SilentAim or Settings.NoSpread) and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
+        local targetPos = CurrentTarget.Character.Head.Position 
         
         if method == "Raycast" then
             args[2] = (targetPos - args[1]).Unit * 1000
             return oldNamecall(self, unpack(args))
-            
         elseif method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" or method == "FindPartOnRay" then
             args[1] = Ray.new(args[1].Origin, (targetPos - args[1].Origin).Unit * 1000)
             return oldNamecall(self, unpack(args))
