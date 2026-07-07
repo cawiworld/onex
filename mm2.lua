@@ -26,6 +26,7 @@ local Settings = {
     NoSpread = false, NoSpreadBind = Enum.KeyCode.Unknown,
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
     AutoShoot = false, AutoShootBind = Enum.KeyCode.Unknown,
+    TPeek = false, TPeekBind = Enum.KeyCode.Unknown,
     
     AutoGun = false, AutoGunBind = Enum.KeyCode.Unknown,
     InfJump = false, InfJumpBind = Enum.KeyCode.Unknown,
@@ -57,6 +58,7 @@ local Settings = {
 
 local CurrentTarget = nil
 local isFlinging = false
+local isPeeking = false
 local flingReturnPos = nil
 
 local OriginalLighting = {
@@ -575,6 +577,7 @@ CreateToggle(Gen, "Silent Aim", "SilentAim")
 CreateToggle(Gen, "NoSpread", "NoSpread")
 CreateToggle(Gen, "Aimlock", "Aimlock")
 CreateToggle(Gen, "AutoShoot", "AutoShoot")
+CreateToggle(Gen, "Teleport Peek (TPeek)", "TPeek")
 CreateToggle(Gen, "Авто-подбор оружия", "AutoGun")
 CreateToggle(Gen, "Бесконечный прыжок", "InfJump")
 CreateToggle(Gen, "Noclip (Сквозь стены)", "Noclip")
@@ -662,8 +665,37 @@ local function IsVisible(targetPart)
     local char = LocalPlayer.Character
     if not char or not targetPart then return false end
     rayParams.FilterDescendantsInstances = {char}
+    
     local result = Workspace:Raycast(Camera.CFrame.Position, (targetPart.Position - Camera.CFrame.Position), rayParams)
     return not result or result.Instance:IsDescendantOf(targetPart.Parent)
+end
+
+local function GetSmartTarget()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
+    local mPos = UserInputService:GetMouseLocation()
+    local tgt = nil
+    local minD = math.huge
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Head") then
+            local isMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
+            if isMeMurd or (not isMeMurd and isMurd) then
+                if not IsVisible(p.Character.Head) then continue end
+                
+                local screenPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mPos).Magnitude
+                    if dist <= Settings.FOV and dist < minD then 
+                        minD = dist
+                        tgt = p 
+                    end
+                end
+            end
+        end
+    end
+    return tgt
 end
 
 local function GetSmartTarget()
@@ -779,24 +811,41 @@ RunService.RenderStepped:Connect(function()
             bav:Destroy() 
         end
     end
+
+    local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
     
-    if Settings.AutoGun and hrp then
+    if Settings.AutoGun and hrp and not isMeMurd then
         local gDrop = workspace:FindFirstChild("GunDrop")
         if not gDrop then
             for _, v in pairs(workspace:GetChildren()) do
-                if v:FindFirstChild("GunDrop") then 
-                    gDrop = v.GunDrop 
-                    break 
-                end
+                if v:FindFirstChild("GunDrop") then gDrop = v.GunDrop; break end
             end
         end
-        
         if gDrop and gDrop:IsA("BasePart") then
             hrp.CFrame = gDrop.CFrame
             if firetouchinterest then
                 firetouchinterest(hrp, gDrop, 0)
                 firetouchinterest(hrp, gDrop, 1)
             end
+        end
+    end
+
+    if Settings.TPeek and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+        local t = char:FindFirstChildOfClass("Tool")
+        if t and (t.Name == "Gun" or t.Name == "Knife") and not isPeeking then
+            isPeeking = true
+            local targetHrp = CurrentTarget.Character.HumanoidRootPart
+            local oldCFrame = hrp.CFrame
+            
+            hrp.CFrame = CFrame.lookAt((targetHrp.CFrame * CFrame.new(0, 0, 3)).Position, targetHrp.Position)
+            
+            task.wait(0.05)
+            t:Activate()
+            
+            task.wait(0.15)
+            hrp.CFrame = oldCFrame
+            
+            task.delay(0.5, function() isPeeking = false end)
         end
     end
     
@@ -835,12 +884,21 @@ RunService.RenderStepped:Connect(function()
     
     if Settings.AutoShoot and not shootDebounce and CurrentTarget and CurrentTarget.Character then
         local t = char:FindFirstChildOfClass("Tool")
-        if t and (t.Name == "Gun" or t.Name == "Knife") then
+        if t and (t.Name == "Gun" or t.Name == "Knife") and not isPeeking then
             local dist = (CurrentTarget.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if (t.Name == "Gun") or (t.Name == "Knife" and dist <= 15) then
+            
+            if t.Name == "Gun" then
+                shootDebounce = true
+                task.wait(0.1)
+                if CurrentTarget and CurrentTarget.Character and IsVisible(CurrentTarget.Character:FindFirstChild("Head")) then
+                    t:Activate()
+                end
+                task.delay(0.4, function() shootDebounce = false end)
+                
+            elseif t.Name == "Knife" and dist <= 15 then
                 shootDebounce = true
                 t:Activate()
-                task.delay(0.5, function() shootDebounce = false end)
+                task.delay(0.4, function() shootDebounce = false end)
             end
         end
     end
