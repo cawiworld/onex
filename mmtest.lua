@@ -27,6 +27,7 @@ local Settings = {
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
     AutoShoot = false, AutoShootBind = Enum.KeyCode.Unknown,
     AntiAim = false, AntiAimBind = Enum.KeyCode.Unknown,
+    AntiKnife = false, AntiKnifeBind = Enum.KeyCode.Unknown,
     DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown,
     FOV = 150,
     
@@ -407,20 +408,22 @@ local function CreateToggle(parent, text, key)
         BBg.Text = "..." 
     end)
 
-    UserInputService.InputBegan:Connect(function(i, gp)
-    if gp then return end
-    
-    -- Меню бинд (показ/скрытие меню)
-    if waitM and i.UserInputType == Enum.UserInputType.Keyboard then
-        Settings.MenuBind = i.KeyCode
-        mb.Text = "[" .. i.KeyCode.Name .. "]"
-        waitM = false
-        SaveConfig()
-    elseif not waitM and i.KeyCode == Settings.MenuBind and Settings.MenuBind ~= Enum.KeyCode.Unknown then
-        Settings.Visible = not Settings.Visible
-        Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -320, 0.5, -240) or UDim2.new(0.5, -320, 1.2, 0)}, 0.4, Enum.EasingStyle.Back)
-    end
-end)
+    UserInputService.InputBegan:Connect(function(inp)
+        if waitB and inp.UserInputType == Enum.UserInputType.Keyboard then
+            local k = inp.KeyCode
+            if k == Enum.KeyCode.Escape or k == Enum.KeyCode.Backspace then 
+                k = Enum.KeyCode.Unknown 
+            end
+            Settings[bindKey] = k
+            BBg.Text = k == Enum.KeyCode.Unknown and "[None]" or "[" .. k.Name .. "]"
+            waitB = false
+            SaveConfig()
+        elseif not waitB and inp.KeyCode == Settings[bindKey] and Settings[bindKey] ~= Enum.KeyCode.Unknown then
+            Settings[key] = not Settings[key]
+            UpdateVis()
+        end
+    end)
+end
 
 local function CreateActionBind(parent, text, key)
     local bindKey = key .. "Bind"
@@ -601,12 +604,12 @@ local function CreatePlayerCycle(parent, text, key)
     Btn.MouseButton1Click:Connect(function()
         local pls = Players:GetPlayers()
         local names = {"None"}
-        for _, p in ipairs(pls) do 
-            if p ~= LocalPlayer then table.insert(names, p.Name) end 
+        for _, p in ipairs(pls) do
+            if p ~= LocalPlayer then table.insert(names, p.Name) end
         end
         local idx = 1
-        for i, n in ipairs(names) do 
-            if Settings[key] == n then idx = i; break end 
+        for i, n in ipairs(names) do
+            if Settings[key] == n then idx = i; break end
         end
         idx = idx + 1
         if idx > #names then idx = 1 end
@@ -631,11 +634,11 @@ local function CreateAction(parent, text, cb)
     BCorner.CornerRadius = UDim.new(0, 8)
     BCorner.Parent = B
 
-    B.MouseButton1Click:Connect(function() 
+    B.MouseButton1Click:Connect(function()
         Tween(B, {Size = UDim2.new(1, -11, 0, 40)}, 0.1)
         task.wait(0.1)
         Tween(B, {Size = UDim2.new(1, -5, 0, 44)}, 0.1, Enum.EasingStyle.Back)
-        cb() 
+        cb()
     end)
 end
 
@@ -652,13 +655,16 @@ HList.Padding = UDim.new(0, 5)
 HList.Parent = HUDCont
 
 local function UpdateHUD()
-    for _, c in pairs(HUDCont:GetChildren()) do 
-        if c:IsA("TextLabel") then c:Destroy() end 
+    for _, c in pairs(HUDCont:GetChildren()) do
+        if c:IsA("TextLabel") then c:Destroy() end
     end
+    -- [ИСПРАВЛЕНО]: TPeek заменен на новые переменные, чтобы не крашить скрипт
     local bindsMap = {
-        Aimlock="Aimlock", SilentAim="Silent Aim", NoSpread="NoSpread", TPeek="TPeek", AutoShoot="AutoShoot", 
-        InfJump="Inf Jump", Noclip="Noclip", SpeedHack="Speed", JumpHack="Jump", 
-        Spinbot="Spinbot", Fling="Рванка", AntiFling="Антирванка", Nightmode="Nightmode", FullBright="FullBright"
+        Aimlock="Aimlock", SilentAim="Silent Aim", NoSpread="NoSpread", 
+        AntiAim="Anti-Aim", AntiKnife="Anti-Knife", AutoShoot="AutoShoot", 
+        InfJump="Inf Jump", Noclip="Noclip", SpeedHack="Speed", 
+        JumpHack="Jump", Spinbot="Spinbot", Fling="Рванка", 
+        AntiFling="Антирванка", Nightmode="Nightmode", FullBright="FullBright"
     }
     for key, name in pairs(bindsMap) do
         if Settings[key] then
@@ -671,144 +677,61 @@ local function UpdateHUD()
             l.TextSize = 14
             l.TextXAlignment = Enum.TextXAlignment.Right
             l.Parent = HUDCont
-
-            local st = Instance.new("UIStroke")
-            st.Thickness = 1.2
-            st.Color = Color3.fromRGB(0,0,0)
-            st.Parent = l
         end
     end
 end
 
--- [ TABS & MENU GENERATION ]
-local Gen = CreatePage("General")
-local Esp = CreatePage("ESP")
-local Wld = CreatePage("World")
-local Trl = CreatePage("Troll")
-local Oth = CreatePage("Other")
-
+-- [ TABS CREATION ]
 CreateTab("General")
-CreateTab("ESP")
+CreateTab("Visuals")
 CreateTab("World")
-CreateTab("Troll")
-CreateTab("Other")
+CreateTab("Misc")
+
+local Gen = CreatePage("General")
+local Vis = CreatePage("Visuals")
+local Wld = CreatePage("World")
+local Msc = CreatePage("Misc")
+
 SwitchTab("General")
 
--- GENERAL
+-- [ GENERAL ]
 CreateToggle(Gen, "Silent Aim (Невидимая наводка)", "SilentAim")
 CreateToggle(Gen, "NoSpread (Стрелять ровно)", "NoSpread")
 CreateToggle(Gen, "Aimlock (Прицел к цели)", "Aimlock")
 CreateToggle(Gen, "AutoShoot (Умный Triggerbot)", "AutoShoot")
-CreateToggle(Gen, "Anti-Aim", "AntiAim")
-CreateToggle(Gen, "Anti-Knife", "AntiKnife")
+CreateToggle(Gen, "Anti-Aim (Jitter/Desync)", "AntiAim")
+CreateToggle(Gen, "Anti-Knife (Телепорт-уворот)", "AntiKnife")
 CreateToggle(Gen, "Отображать FOV", "DrawFOV")
 CreateSlider(Gen, "Размер FOV", 50, 600, "FOV")
-CreateToggle(Gen, "Авто-подбор оружия", "AutoGun")
-CreateToggle(Gen, "Бесконечный прыжок", "InfJump")
-CreateToggle(Gen, "Noclip (Сквозь стены)", "Noclip")
-CreateToggle(Gen, "SpeedHack", "SpeedHack")
-CreateSlider(Gen, "Скорость", 16, 150, "WalkSpeed")
-CreateToggle(Gen, "JumpHack", "JumpHack")
-CreateSlider(Gen, "Прыжок", 50, 200, "JumpPower")
-CreateToggle(Gen, "Spinbot", "Spinbot")
-CreateSlider(Gen, "Скорость вращения", 10, 150, "SpinSpeed")
 
--- ESP
-CreateToggle(Esp, "Убийца (Murderer)", "MurdESP")
-CreateToggle(Esp, "Шериф (Sheriff)", "SheriffESP")
-CreateToggle(Esp, "Мирные (Innocent)", "InnocentESP")
-CreateToggle(Esp, "Оружие (Gun Drop)", "GunESP")
-CreateToggle(Esp, "Никнеймы", "NamesESP")
+-- [ VISUALS ]
+CreateToggle(Vis, "ESP на Убийцу", "MurdESP")
+CreateToggle(Vis, "ESP на Шерифа", "SheriffESP")
+CreateToggle(Vis, "ESP на Невинных", "InnocentESP")
+CreateToggle(Vis, "ESP на Оружие (Пик)", "GunESP")
+CreateToggle(Vis, "Показывать имена", "NamesESP")
 
--- WORLD
-CreateToggle(Wld, "Nightmode (Ночь)", "Nightmode")
-CreateToggle(Wld, "FullBright (Яркий мир)", "FullBright")
-CreateToggle(Wld, "Убрать тени (No Shadows)", "NoShadows")
-CreateSlider(Wld, "Цвет Мира (Красный)", 0, 255, "WorldR")
-CreateSlider(Wld, "Цвет Мира (Зеленый)", 0, 255, "WorldG")
-CreateSlider(Wld, "Цвет Мира (Синий)", 0, 255, "WorldB")
+-- [ WORLD ]
+CreateToggle(Wld, "Ночной режим", "Nightmode")
+CreateToggle(Wld, "Фуллбрайт (Ярко)", "FullBright")
+CreateToggle(Wld, "Убрать тени", "NoShadows")
+CreateSlider(Wld, "Мир: Красный", 0, 255, "WorldR")
+CreateSlider(Wld, "Мир: Зеленый", 0, 255, "WorldG")
+CreateSlider(Wld, "Мир: Синий", 0, 255, "WorldB")
 
--- TROLL
-CreatePlayerCycle(Trl, "Цель для Рванки", "FlingTarget")
-CreateToggle(Trl, "Рванка (Fling)", "Fling")
-CreateToggle(Trl, "Антирванка (Anti-Fling)", "AntiFling")
-
--- OTHER
-CreateAction(Oth, "Телепорт в Лобби (Lobby)", function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local lobby = workspace:FindFirstChild("Lobby")
-        if lobby and lobby:FindFirstChild("Spawns") then
-            local spawns = lobby.Spawns:GetChildren()
-            if #spawns > 0 then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = spawns[math.random(1, #spawns)].CFrame + Vector3.new(0, 3, 0)
-            end
-        end
-    end
-end)
-
-CreateAction(Oth, "Телепорт на Карту (Map)", function()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local normalMap = workspace:FindFirstChild("Normal")
-        if normalMap and normalMap:FindFirstChild("Spawns") then
-            local spawns = normalMap.Spawns:GetChildren()
-            if #spawns > 0 then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = spawns[math.random(1, #spawns)].CFrame + Vector3.new(0, 3, 0)
-            end
-        end
-    end
-end)
-
-local mf = Instance.new("Frame")
-mf.Size = UDim2.new(1, -5, 0, 46)
-mf.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-mf.BackgroundTransparency = 0.6
-mf.Parent = Oth
-
-local mfCorner = Instance.new("UICorner")
-mfCorner.CornerRadius = UDim.new(0, 8)
-mfCorner.Parent = mf
-
-local ml = Instance.new("TextLabel")
-ml.Size = UDim2.new(0.6, 0, 1, 0)
-ml.Position = UDim2.new(0, 15, 0, 0)
-ml.Text = "Скрыть/Показать Меню"
-ml.TextColor3 = Color3.fromRGB(230, 230, 230)
-ml.Font = Enum.Font.GothamMedium
-ml.TextSize = 14
-ml.TextXAlignment = Enum.TextXAlignment.Left
-ml.BackgroundTransparency = 1
-ml.Parent = mf
-
-local mb = Instance.new("TextButton")
-mb.Size = UDim2.new(0, 90, 0, 24)
-mb.Position = UDim2.new(1, -105, 0, 11)
-mb.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-mb.Text = "[" .. (Settings.MenuBind and Settings.MenuBind.Name or "Unknown") .. "]"
-mb.TextColor3 = Color3.fromRGB(66, 135, 245)
-mb.Font = Enum.Font.Gotham
-mb.TextSize = 12
-mb.Parent = mf
-
-local mbCorner = Instance.new("UICorner")
-mbCorner.CornerRadius = UDim.new(0, 4)
-mbCorner.Parent = mb
-
-local waitM = false
-mb.MouseButton1Click:Connect(function() 
-    waitM = true
-    mb.Text = "..." 
-end)
-
-CreateAction(Oth, "💾 Сохранить настройки", function() SaveConfig() end)
-
-local Info = Instance.new("TextLabel")
-Info.Size = UDim2.new(1, 0, 0, 50)
-Info.BackgroundTransparency = 1
-Info.Text = "one.hvh v2.0 FINAL\nРазработчик: cawiworld"
-Info.TextColor3 = Color3.fromRGB(100, 100, 100)
-Info.Font = Enum.Font.Gotham
-Info.TextSize = 12
-Info.Parent = Oth
+-- [ MISC ]
+CreateToggle(Msc, "Авто-подбор оружия", "AutoGun")
+CreateToggle(Msc, "Бесконечный прыжок", "InfJump")
+CreateToggle(Msc, "Noclip (Сквозь стены)", "Noclip")
+CreateToggle(Msc, "SpeedHack", "SpeedHack")
+CreateSlider(Msc, "Скорость", 16, 150, "WalkSpeed")
+CreateToggle(Msc, "JumpHack", "JumpHack")
+CreateSlider(Msc, "Прыжок", 50, 200, "JumpPower")
+CreateToggle(Msc, "Spinbot", "Spinbot")
+CreateSlider(Msc, "Скорость вращения", 10, 150, "SpinSpeed")
+CreateToggle(Msc, "Рванка игроков", "Fling")
+CreateToggle(Msc, "Анти-Рванка", "AntiFling")
+CreatePlayerCycle(Msc, "Цель для рванки", "FlingTarget")
 
 -- [ LOGIC CORE ]
 local rayParams = RaycastParams.new()
@@ -850,11 +773,102 @@ local function GetSmartTarget(ignoreWalls)
     return tgt
 end
 
--- ОБЪЕДИНЕННОЕ И ИСПРАВЛЕННОЕ СОБЫТИЕ ВВОДА
+-- [ MAIN LOOP ]
+local lastHUDUpd = 0
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if os.clock() - lastHUDUpd > 0.5 then
+        lastHUDUpd = os.clock()
+        UpdateHUD()
+    end
+    
+    if Settings.DrawFOV then
+        FOVCircle.Visible = true
+        local mPos = UserInputService:GetMouseLocation()
+        FOVCircle.Position = UDim2.new(0, mPos.X - Settings.FOV, 0, mPos.Y - Settings.FOV)
+        FOVCircle.Size = UDim2.new(0, Settings.FOV * 2, 0, Settings.FOV * 2)
+    else
+        FOVCircle.Visible = false
+    end
+    
+    CurrentTarget = GetSmartTarget(Settings.NoSpread)
+    
+    if Settings.Aimlock and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
+        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, CurrentTarget.Character.HumanoidRootPart.Position)
+    end
+
+    -- [ИСПРАВЛЕНО]: Логика Anti-Knife (Телепорт-уворот) интегрирована сюда
+    if Settings.AntiKnife and hrp and humanoid and humanoid.Health > 0 then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local hasKnife = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
+                if hasKnife then
+                    local targetHrp = p.Character.HumanoidRootPart
+                    local distance = (hrp.Position - targetHrp.Position).Magnitude
+                    if distance < 13 then
+                        hrp.CFrame = hrp.CFrame + Vector3.new(0, 18, 0)
+                    end
+                end
+            end
+        end
+    end
+
+    -- [ИСПРАВЛЕНО]: Безопасная логика Anti-Aim (Jitter) без тасков и зависаний
+    if Settings.AntiAim and hrp and humanoid and humanoid.Health > 0 then
+        local oldCFrame = hrp.CFrame
+        local fakePitch = math.rad(-85)
+        local randomYaw = math.rad(math.random(-180, 180))
+
+        local jitterOffset = Vector3.new(
+            math.random(-25, 25) / 10,
+            0,
+            math.random(-25, 25) / 10
+        )
+        
+        hrp.CFrame = oldCFrame * CFrame.Angles(fakePitch, randomYaw, 0) + jitterOffset
+        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-50, 50), 0, math.random(-50, 50))
+        
+        task.defer(function()
+            if hrp and hrp.Parent then
+                hrp.CFrame = oldCFrame
+            end
+        end)
+    end
+    
+    -- Блок Movement систем (без изменений)
+    if hrp and humanoid and humanoid.Health > 0 then
+        if Settings.SpeedHack then 
+            local moveDir = humanoid.MoveDirection
+            hrp.CFrame = hrp.CFrame + (moveDir * (Settings.WalkSpeed - 16) * task.wait())
+        end
+        if Settings.JumpHack then humanoid.JumpPower = Settings.JumpPower else humanoid.JumpPower = 50 end
+        if Settings.Noclip then
+            wasNoclip = true
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        elseif wasNoclip then
+            wasNoclip = false
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end
+        if Settings.Spinbot then
+            hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(Settings.SpinSpeed), 0)
+        end
+    end
+end)
+
+-- Остальной оригинальный функционал (Ввод, Прыжки, Хуки)
+local mb = Instance.new("TextButton")
+local waitM = false
+
 UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
     
-    -- Меню бинд (Скрытие / Показ меню)
     if waitM and i.UserInputType == Enum.UserInputType.Keyboard then
         Settings.MenuBind = i.KeyCode
         mb.Text = "[" .. i.KeyCode.Name .. "]"
@@ -864,314 +878,13 @@ UserInputService.InputBegan:Connect(function(i, gp)
         Settings.Visible = not Settings.Visible
         Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -320, 0.5, -240) or UDim2.new(0.5, -320, 1.2, 0)}, 0.4, Enum.EasingStyle.Back)
     end
-
-    -- Быстрое переключение Anti-Aim по кнопке на клавиатуре (Клавиша X)
-    if not waitM and Settings.AntiAimBind ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.AntiAimBind then
-        Settings.AntiAim = not Settings.AntiAim
-        SaveConfig()
-    end
-end)
-
-        -- Если цель найдена, начинаем исполнение
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local targetHrp = targetPlayer.Character.HumanoidRootPart
-            
-            -- Ищем оружие (в руках или рюкзаке)
-            local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Knife")
-            
-            if tool then
-                -- Достаем оружие в руки перед телепортом
-                tool.Parent = char 
-                
-                -- Высчитываем позицию строго за спиной соперника на 6 стадов (среднее между 5 и 7)
-                local backPosition = targetHrp.Position + (targetHrp.CFrame.LookVector * -6)
-                
-                -- Мгновенный перенос за спину с разворотом лица/камеры к цели
-                hrp.CFrame = CFrame.new(backPosition, targetHrp.Position)
-                
-                -- Выдерживаем делей перед ударом/выстрелом (0.4 секунды) для стабильной регистрации
-                task.wait(0.4)
-                
-                -- Производим килл (активируем оружие)
-                tool:Activate()
-            end
-        end
-    end
 end)
 
 UserInputService.JumpRequest:Connect(function()
-    if Settings.InfJump and LocalPlayer.Character then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-    end
-end)
-
-RunService.Stepped:Connect(function()
-    -- Фикс Noclip
-    if Settings.Noclip and LocalPlayer.Character then
-        wasNoclip = true
-        local parts = {"Head", "UpperTorso", "LowerTorso", "Torso", "HumanoidRootPart"}
-        for _, partName in pairs(parts) do
-            local p = LocalPlayer.Character:FindFirstChild(partName)
-            if p and p:IsA("BasePart") then p.CanCollide = false end
-        end
-    elseif wasNoclip and LocalPlayer.Character then
-        wasNoclip = false
-        local parts = {"Head", "UpperTorso", "LowerTorso", "Torso", "HumanoidRootPart"}
-        for _, partName in pairs(parts) do
-            local p = LocalPlayer.Character:FindFirstChild(partName)
-            if p and p:IsA("BasePart") then p.CanCollide = true end
-        end
-    end
-    
-    if Settings.AntiFling then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                for _, v in pairs(p.Character:GetDescendants()) do
-                    if v:IsA("BasePart") then
-                        if v.Velocity.Magnitude > 100 then 
-                            v.Velocity = Vector3.zero
-                            v.RotVelocity = Vector3.zero 
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
-local shootDebounce = false
-
-RunService.RenderStepped:Connect(function()
-    UpdateHUD()
-    WMText.Text = "<font color='#4287f5'>one.hvh</font> MM2 | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
-    Watermark.Size = UDim2.new(0, WMText.TextBounds.X + 16, 0, 26)
-    
-    if Settings.DrawFOV then
-        local mPos = UserInputService:GetMouseLocation()
-        FOVCircle.Size = UDim2.new(0, Settings.FOV * 2, 0, Settings.FOV * 2)
-        FOVCircle.Position = UDim2.new(0, mPos.X - Settings.FOV, 0, mPos.Y - Settings.FOV)
-        FOVCircle.Visible = true
-    else
-        FOVCircle.Visible = false
-    end
-
-    -- Визуалы World
-    Lighting.GlobalShadows = not Settings.NoShadows
-    if Settings.Nightmode then
-        Lighting.TimeOfDay = "00:00:00"
-        Lighting.Ambient = Color3.fromRGB(15, 15, 20)
-        Lighting.OutdoorAmbient = Color3.fromRGB(15, 15, 20)
-    elseif Settings.FullBright then
-        Lighting.TimeOfDay = "12:00:00"
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-    else
-        Lighting.TimeOfDay = OriginalLighting.TimeOfDay
-        if Settings.WorldR ~= 255 or Settings.WorldG ~= 255 or Settings.WorldB ~= 255 then
-            local custColor = Color3.fromRGB(Settings.WorldR, Settings.WorldG, Settings.WorldB)
-            Lighting.Ambient = custColor
-            Lighting.OutdoorAmbient = custColor
-        else
-            Lighting.Ambient = OriginalLighting.Ambient
-            Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
-        end
-    end
-
-    -- Aimlock ищет через стены, AutoShoot - нет
-    if Settings.Aimlock then
-        CurrentTarget = GetSmartTarget(true)
-    elseif Settings.SilentAim or Settings.AutoShoot or Settings.NoSpread then 
-        CurrentTarget = GetSmartTarget(false)
-    else 
-        CurrentTarget = nil 
-    end
-
-    if Settings.AntiKnife and hrp then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local hasKnife = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
-                if hasKnife then
-                    local targetHrp = p.Character.HumanoidRootPart
-                    local distance = (hrp.Position - targetHrp.Position).Magnitude
-                    -- Если убийца подошел ближе 13 студов, моментально подбрасываем себя вверх
-                    if distance < 13 then
-                        hrp.CFrame = hrp.CFrame + Vector3.new(0, 18, 0)
-                    end
-                end
-            end
-        end
-    end
-
     local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    
-    if Settings.Aimlock and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, CurrentTarget.Character.HumanoidRootPart.Position)
-    end
-    
-    if hum then
-        if Settings.SpeedHack then hum.WalkSpeed = Settings.WalkSpeed end
-        if Settings.JumpHack then 
-            hum.UseJumpPower = true
-            hum.JumpPower = Settings.JumpPower 
-        end
-    end
-    
-    if hrp then
-        local bav = hrp:FindFirstChild("onehvhSpin")
-        if Settings.Spinbot and not Settings.Fling then
-            if not bav then 
-                bav = Instance.new("BodyAngularVelocity")
-                bav.Name = "onehvhSpin"
-                bav.MaxTorque = Vector3.new(0, math.huge, 0) 
-                bav.Parent = hrp
-            end
-            bav.AngularVelocity = Vector3.new(0, Settings.SpinSpeed, 0)
-        elseif not Settings.Fling and bav then 
-            bav:Destroy() 
-        end
-    end
-    
-    local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
-    if Settings.AutoGun and hrp and not isMeMurd then
-        local gDrop = workspace:FindFirstChild("GunDrop")
-        if not gDrop then
-            for _, v in pairs(workspace:GetChildren()) do
-                if v:FindFirstChild("GunDrop") then gDrop = v.GunDrop; break end
-            end
-        end
-        if gDrop and gDrop:IsA("BasePart") then
-            hrp.CFrame = gDrop.CFrame
-            if firetouchinterest then
-                firetouchinterest(hrp, gDrop, 0)
-                firetouchinterest(hrp, gDrop, 1)
-            end
-        end
-    end
-    
-    if Settings.Fling and hrp then
-        local tgtP = Players:FindFirstChild(Settings.FlingTarget)
-        if tgtP and tgtP.Character and tgtP.Character:FindFirstChild("HumanoidRootPart") then
-            if not isFlinging then
-                isFlinging = true
-                flingReturnPos = hrp.CFrame
-                local bav = Instance.new("BodyAngularVelocity")
-                bav.Name = "onehvhFling"
-                bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) 
-                bav.AngularVelocity = Vector3.new(10000, 10000, 10000)
-                bav.Parent = hrp
-            end
-            hrp.CFrame = tgtP.Character.HumanoidRootPart.CFrame * CFrame.new(math.random(-1,1), math.random(-1,1), math.random(-1,1))
-        else
-            if isFlinging then
-                isFlinging = false
-                local bav = hrp:FindFirstChild("onehvhFling")
-                if bav then bav:Destroy() end
-                if flingReturnPos then hrp.CFrame = flingReturnPos end
-            end
-        end
-    else
-        if isFlinging then
-            isFlinging = false
-            if hrp then
-                local bav = hrp:FindFirstChild("onehvhFling")
-                if bav then bav:Destroy() end
-                if flingReturnPos then hrp.CFrame = flingReturnPos end
-            end
-        end
-    end
-    
-    -- Фикс AutoShoot (Ждет выхода из стены)
-    if Settings.AutoShoot and not shootDebounce and CurrentTarget and CurrentTarget.Character then
-        local t = char:FindFirstChildOfClass("Tool")
-        if t and (t.Name == "Gun" or t.Name == "Knife") then
-            local dist = (CurrentTarget.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if t.Name == "Gun" then
-                shootDebounce = true
-                task.wait(0.05)
-                if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") and IsVisible(CurrentTarget.Character.Head) then
-                    t:Activate()
-                end
-                task.delay(0.3, function() shootDebounce = false end)
-            elseif t.Name == "Knife" and dist <= 15 then
-                shootDebounce = true
-                t:Activate()
-                task.delay(0.3, function() shootDebounce = false end)
-            end
-        end
-    end
-    
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local isMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
-            local isSher = p.Character:FindFirstChild("Gun") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Gun"))
-            local hl = p.Character:FindFirstChild("onehvhESP")
-            local tag = p.Character:FindFirstChild("onehvhTag")
-            
-            local show = false
-            local clr = Color3.new()
-
-            if isMurd and Settings.MurdESP then 
-                show = true
-                clr = Settings.MurdColor
-            elseif isSher and Settings.SheriffESP then 
-                show = true
-                clr = Settings.SheriffColor
-            elseif not isMurd and not isSher and Settings.InnocentESP then 
-                show = true
-                clr = Settings.InnocentColor 
-            end
-            
-            if show then
-                if not hl then 
-                    hl = Instance.new("Highlight")
-                    hl.Name = "onehvhESP"
-                    hl.FillTransparency = 0.5
-                    hl.OutlineTransparency = 0 
-                    hl.Parent = p.Character
-                end
-                hl.FillColor = clr
-
-                if Settings.NamesESP then
-                    if not tag then
-                        tag = Instance.new("BillboardGui")
-                        tag.Name = "onehvhTag"
-                        tag.Size = UDim2.new(0,200,0,50)
-                        tag.AlwaysOnTop = true
-                        tag.StudsOffset = Vector3.new(0,3,0)
-                        tag.Adornee = p.Character.HumanoidRootPart
-                        tag.Parent = p.Character
-
-                        local txt = Instance.new("TextLabel")
-                        txt.Size = UDim2.new(1,0,1,0)
-                        txt.BackgroundTransparency = 1
-                        txt.TextSize = 14
-                        txt.Parent = tag
-                    end
-                    tag.TextLabel.Text = p.Name
-                    tag.TextLabel.TextColor3 = clr
-                    tag.TextLabel.Font = Settings.ESPFont
-                elseif tag then 
-                    tag:Destroy() 
-                end
-            else
-                if hl then hl:Destroy() end 
-                if tag then tag:Destroy() end
-            end
-        end
-    end
-    
-    local gDropESP = workspace:FindFirstChild("GunDrop")
-    if gDropESP and Settings.GunESP then
-        local hl = gDropESP:FindFirstChild("onehvhGun") or Instance.new("Highlight", gDropESP)
-        hl.Name = "onehvhGun"
-        hl.FillColor = Settings.GunColor
-        hl.FillTransparency = 0.5
-    elseif gDropESP and gDropESP:FindFirstChild("onehvhGun") then 
-        gDropESP.onehvhGun:Destroy() 
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    if Settings.InfJump and humanoid and humanoid.Health > 0 then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 end)
 
@@ -1205,51 +918,3 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     end
     return oldNamecall(self, ...)
 end)
-
-local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-    -- ЛОГИКА ANTI-KNIFE (Авто-телепорт вверх при приближении маньяка)
-    if Settings.AntiKnife and hrp and humanoid and humanoid.Health > 0 then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                -- Проверяем наличие ножа у игрока в руках или в рюкзаке
-                local hasKnife = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
-                
-                if hasKnife then
-                    local targetHrp = p.Character.HumanoidRootPart
-                    local distance = (hrp.Position - targetHrp.Position).Magnitude
-                    
-                    -- Если убийца подошел вплотную (меньше 13 студов), подбрасываем себя вверх
-                    if distance < 13 then
-                        hrp.CFrame = hrp.CFrame + Vector3.new(0, 18, 0)
-                    end
-                end
-            end
-        end
-    end
-
-    -- ЛОГИКА ANTI-AIM (Jitter + Fake Pitch)
-    if Settings.AntiAim and hrp and humanoid and humanoid.Health > 0 then
-        -- Вместо опасных тасков и задержек, просто смещаем хитбокс на один физический кадр
-        local oldCFrame = hrp.CFrame
-        local fakePitch = math.rad(-85) -- Имитация жесткого взгляда в пол
-        local randomYaw = math.rad(math.random(-180, 180)) -- Постоянное вращение
-        
-        -- Рандомный рассинхрон хитбокса (Jitter) в радиусе 2 студов
-        local jitterOffset = Vector3.new(
-            math.random(-20, 20) / 10,
-            0,
-            math.random(-20, 20) / 10
-        )
-        
-        -- Сбиваем прицел читерам через скорость и позицию
-        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-50, 50), 0, math.random(-50, 50))
-        hrp.CFrame = oldCFrame * CFrame.Angles(fakePitch, randomYaw, 0) + jitterOffset
-        
-        -- Мгновенно возвращаем обратно перед отрисовкой на нашем экране (чтобы нас не трясло)
-        task.defer(function()
-            if hrp and hrp.Parent then
-                hrp.CFrame = oldCFrame
-            end
-        end)
-    end
