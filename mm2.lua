@@ -10,11 +10,11 @@ local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
-if CoreGui:FindFirstChild("oNex_Hub") then 
-    CoreGui.oNex_Hub:Destroy() 
+if CoreGui:FindFirstChild("oNeHvH_Hub") then 
+    CoreGui.oNeHvH_Hub:Destroy() 
 end
-if CoreGui:FindFirstChild("oNex_HUD") then 
-    CoreGui.oNex_HUD:Destroy() 
+if CoreGui:FindFirstChild("oNeHvH_HUD") then 
+    CoreGui.oNeHvH_HUD:Destroy() 
 end
 
 local Settings = {
@@ -64,7 +64,7 @@ local OriginalLighting = {
     TimeOfDay = Lighting.TimeOfDay
 }
 
-local cfgName = "oNex_MM2_Config_v8.json"
+local cfgName = "onehvh_mm2_config.json"
 
 local function SaveConfig()
     if not writefile then return end
@@ -107,7 +107,7 @@ local function Tween(obj, props, time, style)
 end
 
 local HUD = Instance.new("ScreenGui")
-HUD.Name = "oNex_HUD"
+HUD.Name = "oNeHvH_HUD"
 HUD.Parent = CoreGui
 HUD.ResetOnSpawn = false
 
@@ -154,7 +154,7 @@ WMText.RichText = true
 WMText.Parent = Watermark
 
 local SG = Instance.new("ScreenGui")
-SG.Name = "oNex_Hub"
+SG.Name = "oNeHvH_Hub"
 SG.Parent = CoreGui
 SG.ResetOnSpawn = false
 
@@ -612,7 +612,7 @@ local function UpdateHUD()
 end
 
 RunService.RenderStepped:Connect(function()
-    WMText.Text = "<font color='#4287f5'>oNex</font> MM2 | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
+    WMText.Text = "<font color='#4287f5'>onehvh</font> MM2 | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
     Watermark.Size = UDim2.new(0, WMText.TextBounds.X + 16, 0, 26)
     
     if Settings.DrawFOV then
@@ -721,7 +721,7 @@ CreateAction(Oth, "Сохранить настройки", function() SaveConfig
 local Info = Instance.new("TextLabel")
 Info.Size = UDim2.new(1, 0, 0, 50)
 Info.BackgroundTransparency = 1
-Info.Text = "oNex Hub v1.1\nРазработчик: cawiworld"
+Info.Text = "one.hvh v1.1\nРазработчик: cawiworld"
 Info.TextColor3 = Color3.fromRGB(100, 100, 100)
 Info.Font = Enum.Font.Gotham
 Info.TextSize = 12
