@@ -702,8 +702,10 @@ end)
 
 RunService.Stepped:Connect(function()
     if Settings.Noclip and LocalPlayer.Character then
-        for _, p in pairs(LocalPlayer.Character:GetDescendants()) do
-            if p:IsA("BasePart") and p.CanCollide and p.Name ~= "HumanoidRootPart" then 
+        local parts = {"Head", "UpperTorso", "LowerTorso", "Torso", "HumanoidRootPart"}
+        for _, partName in pairs(parts) do
+            local p = LocalPlayer.Character:FindFirstChild(partName)
+            if p and p:IsA("BasePart") then 
                 p.CanCollide = false 
             end
         end
