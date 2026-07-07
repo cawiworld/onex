@@ -407,22 +407,20 @@ local function CreateToggle(parent, text, key)
         BBg.Text = "..." 
     end)
 
-    UserInputService.InputBegan:Connect(function(inp)
-        if waitB and inp.UserInputType == Enum.UserInputType.Keyboard then
-            local k = inp.KeyCode
-            if k == Enum.KeyCode.Escape or k == Enum.KeyCode.Backspace then 
-                k = Enum.KeyCode.Unknown 
-            end
-            Settings[bindKey] = k
-            BBg.Text = k == Enum.KeyCode.Unknown and "[None]" or "[" .. k.Name .. "]"
-            waitB = false
-            SaveConfig()
-        elseif not waitB and inp.KeyCode == Settings[bindKey] and Settings[bindKey] ~= Enum.KeyCode.Unknown then
-            Settings[key] = not Settings[key]
-            UpdateVis()
-        end
-    end)
-end
+    UserInputService.InputBegan:Connect(function(i, gp)
+    if gp then return end
+    
+    -- Меню бинд (показ/скрытие меню)
+    if waitM and i.UserInputType == Enum.UserInputType.Keyboard then
+        Settings.MenuBind = i.KeyCode
+        mb.Text = "[" .. i.KeyCode.Name .. "]"
+        waitM = false
+        SaveConfig()
+    elseif not waitM and i.KeyCode == Settings.MenuBind and Settings.MenuBind ~= Enum.KeyCode.Unknown then
+        Settings.Visible = not Settings.Visible
+        Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -320, 0.5, -240) or UDim2.new(0.5, -320, 1.2, 0)}, 0.4, Enum.EasingStyle.Back)
+    end
+end)
 
 local function CreateActionBind(parent, text, key)
     local bindKey = key .. "Bind"
@@ -1005,26 +1003,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- ЛОГИКА JITTER ANTI-AIM & FAKE PITCH
-    if Settings.AntiAim and hrp then
-        local oldCFrame = hrp.CFrame
-        local fakePitch = math.rad(-85) -- Имитируем жесткий взгляд в пол для чужих рейкастов
-        local randomYaw = math.rad(math.random(-180, 180)) -- Крутимся на 360 градусов со скоростью света
-        
-        -- Смещаем хитбокс в случайную сторону на 2 студа (Desync/Рассинхрон)
-        local jitterOffset = Vector3.new(math.random(-20, 20) / 10, 0, math.random(-20, 20) / 10)
-        
-        -- Отправляем серверу фейковую позицию
-        hrp.CFrame = oldCFrame * CFrame.Angles(fakePitch, randomYaw, 0) + jitterOffset
-        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-50, 50), 0, math.random(-50, 50)) -- Ломаем Silent Aim
-        
-        -- Моментально возвращаем позицию локально, чтобы на вашем экране вас не трясло
-        RunService.RenderStepped:Wait()
-        if hrp and hrp.Parent then
-            hrp.CFrame = oldCFrame
-        end
-    end
-
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
@@ -1228,51 +1206,50 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     return oldNamecall(self, ...)
 end)
 
--- [ ANTI-AIM ]
-RunService.Heartbeat:Connect(function()
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-    
-    if not hrp or not humanoid or humanoid.Health <= 0 then return end
-    
-    if Settings.AntiKnife then
+local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+    -- ЛОГИКА ANTI-KNIFE (Авто-телепорт вверх при приближении маньяка)
+    if Settings.AntiKnife and hrp and humanoid and humanoid.Health > 0 then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                -- Проверяем наличие ножа у игрока в руках или в рюкзаке
                 local hasKnife = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
                 
                 if hasKnife then
                     local targetHrp = p.Character.HumanoidRootPart
                     local distance = (hrp.Position - targetHrp.Position).Magnitude
                     
+                    -- Если убийца подошел вплотную (меньше 13 студов), подбрасываем себя вверх
                     if distance < 13 then
                         hrp.CFrame = hrp.CFrame + Vector3.new(0, 18, 0)
-                        
                     end
                 end
             end
         end
     end
 
-    if Settings.AntiAim then
+    -- ЛОГИКА ANTI-AIM (Jitter + Fake Pitch)
+    if Settings.AntiAim and hrp and humanoid and humanoid.Health > 0 then
+        -- Вместо опасных тасков и задержек, просто смещаем хитбокс на один физический кадр
         local oldCFrame = hrp.CFrame
+        local fakePitch = math.rad(-85) -- Имитация жесткого взгляда в пол
+        local randomYaw = math.rad(math.random(-180, 180)) -- Постоянное вращение
         
-        local fakePitch = math.rad(-85)
-        local randomYaw = math.rad(math.random(-180, 180))
-
+        -- Рандомный рассинхрон хитбокса (Jitter) в радиусе 2 студов
         local jitterOffset = Vector3.new(
-            math.random(-25, 25) / 10,
+            math.random(-20, 20) / 10,
             0,
-            math.random(-25, 25) / 10
+            math.random(-20, 20) / 10
         )
         
+        -- Сбиваем прицел читерам через скорость и позицию
+        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-50, 50), 0, math.random(-50, 50))
         hrp.CFrame = oldCFrame * CFrame.Angles(fakePitch, randomYaw, 0) + jitterOffset
         
-        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-50, 50), 0, math.random(-50, 50))
-        
-        RunService.RenderStepped:Wait()
-        if hrp and hrp.Parent then
-            hrp.CFrame = oldCFrame
-        end
+        -- Мгновенно возвращаем обратно перед отрисовкой на нашем экране (чтобы нас не трясло)
+        task.defer(function()
+            if hrp and hrp.Parent then
+                hrp.CFrame = oldCFrame
+            end
+        end)
     end
-end)
