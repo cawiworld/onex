@@ -864,10 +864,6 @@ UserInputService.InputBegan:Connect(function(i, gp)
         Settings.Visible = not Settings.Visible
         Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -320, 0.5, -240) or UDim2.new(0.5, -320, 1.2, 0)}, 0.4, Enum.EasingStyle.Back)
     end
-
-    -- TPeek Логика
-UserInputService.InputBegan:Connect(function(i, gp)
-    if gp then return end
     
     -- Проверяем, что бинд TPeek настроен в меню и клавиша нажата
     if Settings.TPeek ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.TPeekBind then
