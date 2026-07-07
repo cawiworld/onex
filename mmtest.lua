@@ -26,7 +26,7 @@ local Settings = {
     NoSpread = false, NoSpreadBind = Enum.KeyCode.Unknown,
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
     AutoShoot = false, AutoShootBind = Enum.KeyCode.Unknown,
-    TPeekBind = Enum.KeyCode.Unknown,
+    TPeek = false, TPeekBind = Enum.KeyCode.Unknown,
     DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown,
     FOV = 150,
     
@@ -658,7 +658,7 @@ local function UpdateHUD()
         if c:IsA("TextLabel") then c:Destroy() end 
     end
     local bindsMap = {
-        Aimlock="Aimlock", SilentAim="Silent Aim", NoSpread="NoSpread", AutoShoot="AutoShoot", 
+        Aimlock="Aimlock", SilentAim="Silent Aim", NoSpread="NoSpread", TPeek="TPeek", AutoShoot="AutoShoot", 
         InfJump="Inf Jump", Noclip="Noclip", SpeedHack="Speed", JumpHack="Jump", 
         Spinbot="Spinbot", Fling="Рванка", AntiFling="Антирванка", Nightmode="Nightmode", FullBright="FullBright"
     }
@@ -701,7 +701,7 @@ CreateToggle(Gen, "Silent Aim (Невидимая наводка)", "SilentAim")
 CreateToggle(Gen, "NoSpread (Стрелять ровно)", "NoSpread")
 CreateToggle(Gen, "Aimlock (Прицел к цели)", "Aimlock")
 CreateToggle(Gen, "AutoShoot (Умный Triggerbot)", "AutoShoot")
-CreateActionBind(Gen, "Teleport Peek (Килл за спиной)", "TPeek")
+CreateToggle(Gen, "Teleport Peek", "TPeek")
 CreateToggle(Gen, "Отображать FOV", "DrawFOV")
 CreateSlider(Gen, "Размер FOV", 50, 600, "FOV")
 CreateToggle(Gen, "Авто-подбор оружия", "AutoGun")
@@ -867,22 +867,28 @@ UserInputService.InputBegan:Connect(function(i, gp)
 
     -- TPeek Логика
     if Settings.TPeekBind ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.TPeekBind then
-        local tgt = GetSmartTarget(true) -- игнор стен = true
-        if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") then
-            local char = LocalPlayer.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            local targetHrp = tgt.Character.HumanoidRootPart
-            local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Knife")
-            
-            if hrp and tool then
-                tool.Parent = char 
-                local backPos = targetHrp.Position + (targetHrp.CFrame.LookVector * -3)
-                hrp.CFrame = CFrame.new(backPos, targetHrp.Position)
-                task.delay(0.1, function() tool:Activate() end)
+        if Settings.TPeek then
+            local tgt = GetSmartTarget(true)
+            if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") then
+                local char = LocalPlayer.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local targetHrp = tgt.Character.HumanoidRootPart
+                local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Knife")
+                
+                if hrp and tool then
+                    tool.Parent = char 
+                    local backPos = targetHrp.Position + (targetHrp.CFrame.LookVector * -3)
+                    hrp.CFrame = CFrame.new(backPos, targetHrp.Position)
+                    
+                    task.delay(0.1, function() tool:Activate() end)
+                end
             end
+            
+            task.delay(0.5, function()
+                Settings.TPeek = false
+            end)
         end
     end
-end)
 
 UserInputService.JumpRequest:Connect(function()
     if Settings.InfJump and LocalPlayer.Character then
