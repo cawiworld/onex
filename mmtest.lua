@@ -866,29 +866,68 @@ UserInputService.InputBegan:Connect(function(i, gp)
     end
 
     -- TPeek Логика
+UserInputService.InputBegan:Connect(function(i, gp)
+    if gp then return end
+    
+    -- Проверяем, что бинд TPeek настроен в меню и клавиша нажата
     if Settings.TPeekBind ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.TPeekBind then
-        if Settings.TPeek then
-            local tgt = GetSmartTarget(true)
-            if tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") then
-                local char = LocalPlayer.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                local targetHrp = tgt.Character.HumanoidRootPart
-                local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Knife")
+        local char = LocalPlayer.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        -- Автоматически определяем, кто мы (Мардер или Шериф/Мирный)
+        local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
+        
+        -- Поиск цели с учетом ролей и пробития стен
+        local mPos = UserInputService:GetMouseLocation()
+        local targetPlayer = nil
+        local minDistance = math.huge
+        
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                -- Проверяем, является ли текущий игрок мардером (ищем нож)
+                local isTargetMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
                 
-                if hrp and tool then
-                    tool.Parent = char 
-                    local backPos = targetHrp.Position + (targetHrp.CFrame.LookVector * -3)
-                    hrp.CFrame = CFrame.new(backPos, targetHrp.Position)
-                    
-                    task.delay(0.1, function() tool:Activate() end)
+                -- Условие: Если мы НЕ мардер (мы шериф), то летим ТОЛЬКО на мардера. Если мы мардер — летим на кого угодно.
+                if isMeMurd or (not isMeMurd and isTargetMurd) then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                    if onScreen then
+                        local distToCursor = (Vector2.new(screenPos.X, screenPos.Y) - mPos).Magnitude
+                        if distToCursor <= Settings.FOV and distToCursor < minDistance then 
+                            minDistance = distToCursor
+                            targetPlayer = p 
+                        end
+                    end
                 end
             end
+        end
+
+        -- Если цель найдена, начинаем исполнение
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHrp = targetPlayer.Character.HumanoidRootPart
             
-            task.delay(0.5, function()
-                Settings.TPeek = false
-            end)
+            -- Ищем оружие (в руках или рюкзаке)
+            local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Knife")
+            
+            if tool then
+                -- Достаем оружие в руки перед телепортом
+                tool.Parent = char 
+                
+                -- Высчитываем позицию строго за спиной соперника на 6 стадов (среднее между 5 и 7)
+                local backPosition = targetHrp.Position + (targetHrp.CFrame.LookVector * -6)
+                
+                -- Мгновенный перенос за спину с разворотом лица/камеры к цели
+                hrp.CFrame = CFrame.new(backPosition, targetHrp.Position)
+                
+                -- Выдерживаем делей перед ударом/выстрелом (0.4 секунды) для стабильной регистрации
+                task.wait(0.4)
+                
+                -- Производим килл (активируем оружие)
+                tool:Activate()
+            end
         end
     end
+end)
 
 UserInputService.JumpRequest:Connect(function()
     if Settings.InfJump and LocalPlayer.Character then
