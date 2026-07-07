@@ -10,11 +10,11 @@ local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
-if CoreGui:FindFirstChild("oNeHvH_Hub") then 
-    CoreGui.oNeHvH_Hub:Destroy() 
+if CoreGui:FindFirstChild("onehvh_Hub") then 
+    CoreGui.onehvh_Hub:Destroy() 
 end
-if CoreGui:FindFirstChild("oNeHvH_HUD") then 
-    CoreGui.oNeHvH_HUD:Destroy() 
+if CoreGui:FindFirstChild("onehvh_HUD") then 
+    CoreGui.onehvh_HUD:Destroy() 
 end
 
 local Settings = {
@@ -26,8 +26,6 @@ local Settings = {
     NoSpread = false, NoSpreadBind = Enum.KeyCode.Unknown,
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
     AutoShoot = false, AutoShootBind = Enum.KeyCode.Unknown,
-    DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown,
-    FOV = 150,
     
     AutoGun = false, AutoGunBind = Enum.KeyCode.Unknown,
     InfJump = false, InfJumpBind = Enum.KeyCode.Unknown,
@@ -58,13 +56,16 @@ local Settings = {
 }
 
 local CurrentTarget = nil
+local isFlinging = false
+local flingReturnPos = nil
+
 local OriginalLighting = {
     Ambient = Lighting.Ambient,
     OutdoorAmbient = Lighting.OutdoorAmbient,
     TimeOfDay = Lighting.TimeOfDay
 }
 
-local cfgName = "onehvh_mm2_config.json"
+local cfgName = "onehvh_config.json"
 
 local function SaveConfig()
     if not writefile then return end
@@ -106,35 +107,18 @@ local function Tween(obj, props, time, style)
     TweenService:Create(obj, TweenInfo.new(time or 0.2, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play() 
 end
 
+-- [ UI BUILD ]
 local HUD = Instance.new("ScreenGui")
-HUD.Name = "oNeHvH_HUD"
+HUD.Name = "onehvh_HUD"
 HUD.Parent = CoreGui
 HUD.ResetOnSpawn = false
-
-local FOVCircle = Instance.new("Frame")
-FOVCircle.BackgroundTransparency = 1
-FOVCircle.Visible = false
-FOVCircle.Parent = HUD
-
-local FOVStroke = Instance.new("UIStroke")
-FOVStroke.Color = Color3.fromRGB(255, 255, 255)
-FOVStroke.Thickness = 1.5
-FOVStroke.Transparency = 0.5
-FOVStroke.Parent = FOVCircle
-
-local FOVCorner = Instance.new("UICorner")
-FOVCorner.CornerRadius = UDim.new(1, 0)
-FOVCorner.Parent = FOVCircle
 
 local Watermark = Instance.new("Frame")
 Watermark.Position = UDim2.new(0, 15, 0, 15)
 Watermark.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 Watermark.BackgroundTransparency = 0.4
 Watermark.Parent = HUD
-
-local WMCorner = Instance.new("UICorner")
-WMCorner.CornerRadius = UDim.new(0, 6)
-WMCorner.Parent = Watermark
+Instance.new("UICorner", Watermark).CornerRadius = UDim.new(0, 6)
 
 local WMStroke = Instance.new("UIStroke")
 WMStroke.Color = Color3.fromRGB(66, 135, 245)
@@ -154,7 +138,7 @@ WMText.RichText = true
 WMText.Parent = Watermark
 
 local SG = Instance.new("ScreenGui")
-SG.Name = "oNeHvH_Hub"
+SG.Name = "onehvh_Hub"
 SG.Parent = CoreGui
 SG.ResetOnSpawn = false
 
@@ -166,10 +150,7 @@ Main.BackgroundTransparency = 0.3
 Main.Active = true
 Main.Draggable = true
 Main.Parent = SG
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = Main
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
 
 local MStroke = Instance.new("UIStroke")
 MStroke.Color = Color3.fromRGB(66, 135, 245)
@@ -192,16 +173,13 @@ Sidebar.Size = UDim2.new(0, 170, 1, 0)
 Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
 Sidebar.BackgroundTransparency = 0.4
 Sidebar.Parent = Main
-
-local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 12)
-SidebarCorner.Parent = Sidebar
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
 
 local Logo = Instance.new("TextLabel")
 Logo.Size = UDim2.new(1, 0, 0, 70)
 Logo.Position = UDim2.new(0, 20, 0, 10)
 Logo.RichText = true
-Logo.Text = "<font color='#FFFFFF'>o</font><font color='#4287f5'>Nex</font>"
+Logo.Text = "<font color='#FFFFFF'>one.</font><font color='#4287f5'>hvh</font>"
 Logo.TextSize = 32
 Logo.Font = Enum.Font.GothamBold
 Logo.TextXAlignment = Enum.TextXAlignment.Left
@@ -280,10 +258,7 @@ local function CreateTab(name)
     B.BackgroundTransparency = 1
     B.Text = ""
     B.Parent = TabCont
-
-    local BCorner = Instance.new("UICorner")
-    BCorner.CornerRadius = UDim.new(0, 8)
-    BCorner.Parent = B
+    Instance.new("UICorner", B).CornerRadius = UDim.new(0, 8)
 
     local L = Instance.new("TextLabel")
     L.Size = UDim2.new(1, -15, 1, 0)
@@ -304,20 +279,14 @@ end
 
 local function CreateToggle(parent, text, key)
     local bindKey = key .. "Bind"
-    
-    if Settings[bindKey] == nil then
-        Settings[bindKey] = Enum.KeyCode.Unknown
-    end
+    if Settings[bindKey] == nil then Settings[bindKey] = Enum.KeyCode.Unknown end
 
     local F = Instance.new("Frame")
     F.Size = UDim2.new(1, -5, 0, 46)
     F.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     F.BackgroundTransparency = 0.6
     F.Parent = parent
-
-    local FCorner = Instance.new("UICorner")
-    FCorner.CornerRadius = UDim.new(0, 8)
-    FCorner.Parent = F
+    Instance.new("UICorner", F).CornerRadius = UDim.new(0, 8)
 
     local S = Instance.new("UIStroke")
     S.Color = Color3.fromRGB(255, 255, 255)
@@ -340,20 +309,14 @@ local function CreateToggle(parent, text, key)
     Bg.Position = UDim2.new(1, -55, 0, 12)
     Bg.BackgroundColor3 = Settings[key] and Color3.fromRGB(66, 135, 245) or Color3.fromRGB(45, 45, 50)
     Bg.Parent = F
-
-    local BgCorner = Instance.new("UICorner")
-    BgCorner.CornerRadius = UDim.new(1, 0)
-    BgCorner.Parent = Bg
+    Instance.new("UICorner", Bg).CornerRadius = UDim.new(1, 0)
 
     local C = Instance.new("Frame")
     C.Size = UDim2.new(0, 18, 0, 18)
     C.Position = Settings[key] and UDim2.new(1, -20, 0, 2) or UDim2.new(0, 2, 0, 2)
     C.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     C.Parent = Bg
-
-    local CCorner = Instance.new("UICorner")
-    CCorner.CornerRadius = UDim.new(1, 0)
-    CCorner.Parent = C
+    Instance.new("UICorner", C).CornerRadius = UDim.new(1, 0)
 
     local currentBind = Settings[bindKey]
     local bindName = currentBind == Enum.KeyCode.Unknown and "[None]" or "[" .. currentBind.Name .. "]"
@@ -368,10 +331,7 @@ local function CreateToggle(parent, text, key)
     BBg.TextSize = 11
     BBg.ZIndex = 2
     BBg.Parent = F
-
-    local BBgCorner = Instance.new("UICorner")
-    BBgCorner.CornerRadius = UDim.new(0, 4)
-    BBgCorner.Parent = BBg
+    Instance.new("UICorner", BBg).CornerRadius = UDim.new(0, 4)
 
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(1, 0, 1, 0)
@@ -422,10 +382,7 @@ local function CreateSlider(parent, text, min, max, key)
     F.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     F.BackgroundTransparency = 0.6
     F.Parent = parent
-
-    local FCorner = Instance.new("UICorner")
-    FCorner.CornerRadius = UDim.new(0, 8)
-    FCorner.Parent = F
+    Instance.new("UICorner", F).CornerRadius = UDim.new(0, 8)
 
     local L = Instance.new("TextLabel")
     L.Size = UDim2.new(0.5, 0, 0, 25)
@@ -454,19 +411,13 @@ local function CreateSlider(parent, text, min, max, key)
     Bar.Position = UDim2.new(0, 15, 0, 36)
     Bar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     Bar.Parent = F
-
-    local BarCorner = Instance.new("UICorner")
-    BarCorner.CornerRadius = UDim.new(1, 0)
-    BarCorner.Parent = Bar
+    Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
 
     local Fill = Instance.new("Frame")
     Fill.Size = UDim2.new(math.clamp((Settings[key] - min) / (max - min), 0, 1), 0, 1, 0)
     Fill.BackgroundColor3 = Color3.fromRGB(66, 135, 245)
     Fill.Parent = Bar
-
-    local FillCorner = Instance.new("UICorner")
-    FillCorner.CornerRadius = UDim.new(1, 0)
-    FillCorner.Parent = Fill
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
 
     local Btn = Instance.new("TextButton")
     Btn.Size = UDim2.new(1, 0, 1, 0)
@@ -500,10 +451,7 @@ local function CreatePlayerCycle(parent, text, key)
     F.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     F.BackgroundTransparency = 0.6
     F.Parent = parent
-
-    local FCorner = Instance.new("UICorner")
-    FCorner.CornerRadius = UDim.new(0, 8)
-    FCorner.Parent = F
+    Instance.new("UICorner", F).CornerRadius = UDim.new(0, 8)
 
     local L = Instance.new("TextLabel")
     L.Size = UDim2.new(0.5, 0, 1, 0)
@@ -525,10 +473,7 @@ local function CreatePlayerCycle(parent, text, key)
     Btn.Font = Enum.Font.GothamBold
     Btn.TextSize = 12
     Btn.Parent = F
-
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 4)
-    BtnCorner.Parent = Btn
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 4)
 
     Btn.MouseButton1Click:Connect(function()
         local pls = Players:GetPlayers()
@@ -558,10 +503,7 @@ local function CreateAction(parent, text, cb)
     B.Font = Enum.Font.GothamBold
     B.TextSize = 14
     B.Parent = parent
-
-    local BCorner = Instance.new("UICorner")
-    BCorner.CornerRadius = UDim.new(0, 8)
-    BCorner.Parent = B
+    Instance.new("UICorner", B).CornerRadius = UDim.new(0, 8)
 
     B.MouseButton1Click:Connect(function() 
         Tween(B, {Size = UDim2.new(1, -11, 0, 40)}, 0.1)
@@ -571,6 +513,7 @@ local function CreateAction(parent, text, cb)
     end)
 end
 
+-- [ HUD ACTIVE LIST ]
 local HUDCont = Instance.new("Frame")
 HUDCont.Size = UDim2.new(0, 220, 1, -20)
 HUDCont.Position = UDim2.new(1, -230, 0, 0)
@@ -612,19 +555,11 @@ local function UpdateHUD()
 end
 
 RunService.RenderStepped:Connect(function()
-    WMText.Text = "<font color='#4287f5'>onehvh</font> MM2 | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
+    WMText.Text = "<font color='#4287f5'>one.hvh</font> MM2 | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
     Watermark.Size = UDim2.new(0, WMText.TextBounds.X + 16, 0, 26)
-    
-    if Settings.DrawFOV then
-        local mPos = UserInputService:GetMouseLocation()
-        FOVCircle.Size = UDim2.new(0, Settings.FOV * 2, 0, Settings.FOV * 2)
-        FOVCircle.Position = UDim2.new(0, mPos.X - Settings.FOV, 0, mPos.Y - Settings.FOV)
-        FOVCircle.Visible = true
-    else
-        FOVCircle.Visible = false
-    end
 end)
 
+-- [ GENERATE TABS ]
 local Gen = CreatePage("General")
 local Esp = CreatePage("ESP")
 local Trl = CreatePage("Troll")
@@ -640,11 +575,9 @@ CreateToggle(Gen, "Silent Aim", "SilentAim")
 CreateToggle(Gen, "NoSpread", "NoSpread")
 CreateToggle(Gen, "Aimlock", "Aimlock")
 CreateToggle(Gen, "AutoShoot", "AutoShoot")
-CreateToggle(Gen, "Отображать FOV", "DrawFOV")
-CreateSlider(Gen, "Размер FOV", 50, 600, "FOV")
 CreateToggle(Gen, "Авто-подбор оружия", "AutoGun")
 CreateToggle(Gen, "Бесконечный прыжок", "InfJump")
-CreateToggle(Gen, "Noclip", "Noclip")
+CreateToggle(Gen, "Noclip (Сквозь стены)", "Noclip")
 CreateToggle(Gen, "SpeedHack", "SpeedHack")
 CreateSlider(Gen, "Скорость", 16, 150, "WalkSpeed")
 CreateToggle(Gen, "JumpHack", "JumpHack")
@@ -668,10 +601,7 @@ mf.Size = UDim2.new(1, -5, 0, 46)
 mf.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 mf.BackgroundTransparency = 0.6
 mf.Parent = Oth
-
-local mfCorner = Instance.new("UICorner")
-mfCorner.CornerRadius = UDim.new(0, 8)
-mfCorner.Parent = mf
+Instance.new("UICorner", mf).CornerRadius = UDim.new(0, 8)
 
 local ml = Instance.new("TextLabel")
 ml.Size = UDim2.new(0.6, 0, 1, 0)
@@ -693,10 +623,7 @@ mb.TextColor3 = Color3.fromRGB(66, 135, 245)
 mb.Font = Enum.Font.Gotham
 mb.TextSize = 12
 mb.Parent = mf
-
-local mbCorner = Instance.new("UICorner")
-mbCorner.CornerRadius = UDim.new(0, 4)
-mbCorner.Parent = mb
+Instance.new("UICorner", mb).CornerRadius = UDim.new(0, 4)
 
 local waitM = false
 mb.MouseButton1Click:Connect(function() 
@@ -727,6 +654,7 @@ Info.Font = Enum.Font.Gotham
 Info.TextSize = 12
 Info.Parent = Oth
 
+-- [ LOGIC CORE ]
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
@@ -754,7 +682,7 @@ local function GetSmartTarget()
                 local screenPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
                 if onScreen then
                     local dist = (Vector2.new(screenPos.X, screenPos.Y) - mPos).Magnitude
-                    if dist <= Settings.FOV and dist < minD then 
+                    if dist < minD then 
                         minD = dist
                         tgt = p 
                     end
@@ -775,7 +703,7 @@ end)
 RunService.Stepped:Connect(function()
     if Settings.Noclip and LocalPlayer.Character then
         for _, p in pairs(LocalPlayer.Character:GetDescendants()) do
-            if p:IsA("BasePart") and (p.Name == "UpperTorso" or p.Name == "LowerTorso" or p.Name == "Torso" or p.Name == "Head") then 
+            if p:IsA("BasePart") and p.CanCollide and p.Name ~= "HumanoidRootPart" then 
                 p.CanCollide = false 
             end
         end
@@ -836,11 +764,11 @@ RunService.RenderStepped:Connect(function()
     end
     
     if hrp then
-        local bav = hrp:FindFirstChild("oNexSpin")
+        local bav = hrp:FindFirstChild("onehvhSpin")
         if Settings.Spinbot and not Settings.Fling then
             if not bav then 
                 bav = Instance.new("BodyAngularVelocity")
-                bav.Name = "oNexSpin"
+                bav.Name = "onehvhSpin"
                 bav.MaxTorque = Vector3.new(0, math.huge, 0) 
                 bav.Parent = hrp
             end
@@ -855,18 +783,36 @@ RunService.RenderStepped:Connect(function()
         if gDrop then hrp.CFrame = gDrop.CFrame end
     end
     
+    -- [ FLING LOGIC FIX ]
     if Settings.Fling and hrp then
         local tgtP = Players:FindFirstChild(Settings.FlingTarget)
         if tgtP and tgtP.Character and tgtP.Character:FindFirstChild("HumanoidRootPart") then
-            local bav = hrp:FindFirstChild("oNexSpin")
-            if not bav then 
-                bav = Instance.new("BodyAngularVelocity")
-                bav.Name = "oNexSpin"
+            if not isFlinging then
+                isFlinging = true
+                flingReturnPos = hrp.CFrame
+                local bav = Instance.new("BodyAngularVelocity")
+                bav.Name = "onehvhFling"
                 bav.MaxTorque = Vector3.new(math.huge, math.huge, math.huge) 
+                bav.AngularVelocity = Vector3.new(9999, 9999, 9999)
                 bav.Parent = hrp
             end
-            bav.AngularVelocity = Vector3.new(10000, 10000, 10000)
-            hrp.CFrame = tgtP.Character.HumanoidRootPart.CFrame * CFrame.new(math.random(-1,1), math.random(-1,1), math.random(-1,1))
+            hrp.CFrame = tgtP.Character.HumanoidRootPart.CFrame
+        else
+            if isFlinging then
+                isFlinging = false
+                local bav = hrp:FindFirstChild("onehvhFling")
+                if bav then bav:Destroy() end
+                if flingReturnPos then hrp.CFrame = flingReturnPos end
+            end
+        end
+    else
+        if isFlinging then
+            isFlinging = false
+            if hrp then
+                local bav = hrp:FindFirstChild("onehvhFling")
+                if bav then bav:Destroy() end
+                if flingReturnPos then hrp.CFrame = flingReturnPos end
+            end
         end
     end
     
@@ -874,7 +820,7 @@ RunService.RenderStepped:Connect(function()
         local t = char:FindFirstChildOfClass("Tool")
         if t and (t.Name == "Gun" or t.Name == "Knife") then
             local dist = (CurrentTarget.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if (t.Name == "Gun") or (t.Name == "Knife" and dist <= 12) then
+            if (t.Name == "Gun") or (t.Name == "Knife" and dist <= 15) then
                 shootDebounce = true
                 t:Activate()
                 task.delay(0.5, function() shootDebounce = false end)
@@ -886,8 +832,8 @@ RunService.RenderStepped:Connect(function()
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             local isMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
             local isSher = p.Character:FindFirstChild("Gun") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Gun"))
-            local hl = p.Character:FindFirstChild("oNexESP")
-            local tag = p.Character:FindFirstChild("oNexTag")
+            local hl = p.Character:FindFirstChild("onehvhESP")
+            local tag = p.Character:FindFirstChild("onehvhTag")
             
             local show = false
             local clr = Color3.new()
@@ -906,7 +852,7 @@ RunService.RenderStepped:Connect(function()
             if show then
                 if not hl then 
                     hl = Instance.new("Highlight")
-                    hl.Name = "oNexESP"
+                    hl.Name = "onehvhESP"
                     hl.FillTransparency = 0.5
                     hl.OutlineTransparency = 0 
                     hl.Parent = p.Character
@@ -916,7 +862,7 @@ RunService.RenderStepped:Connect(function()
                 if Settings.NamesESP then
                     if not tag then
                         tag = Instance.new("BillboardGui")
-                        tag.Name = "oNexTag"
+                        tag.Name = "onehvhTag"
                         tag.Size = UDim2.new(0,200,0,50)
                         tag.AlwaysOnTop = true
                         tag.StudsOffset = Vector3.new(0,3,0)
@@ -944,15 +890,16 @@ RunService.RenderStepped:Connect(function()
     
     local gDropESP = workspace:FindFirstChild("GunDrop")
     if gDropESP and Settings.GunESP then
-        local hl = gDropESP:FindFirstChild("oNexGun") or Instance.new("Highlight", gDropESP)
-        hl.Name = "oNexGun"
+        local hl = gDropESP:FindFirstChild("onehvhGun") or Instance.new("Highlight", gDropESP)
+        hl.Name = "onehvhGun"
         hl.FillColor = Settings.GunColor
         hl.FillTransparency = 0.5
-    elseif gDropESP and gDropESP:FindFirstChild("oNexGun") then 
-        gDropESP.oNexGun:Destroy() 
+    elseif gDropESP and gDropESP:FindFirstChild("onehvhGun") then 
+        gDropESP.onehvhGun:Destroy() 
     end
 end)
 
+-- [ HOOKS ]
 local oldIdx
 oldIdx = hookmetamethod(game, "__index", function(self, key)
     if not checkcaller() and Settings.SilentAim and typeof(self) == "Instance" and self:IsA("PlayerMouse") then
