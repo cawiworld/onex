@@ -648,6 +648,30 @@ end)
 
 CreateAction(Oth, "Сохранить настройки", function() SaveConfig() end)
 
+CreateAction(Oth, "Телепорт в Лобби (Lobby)", function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local lobby = workspace:FindFirstChild("Lobby")
+        if lobby and lobby:FindFirstChild("Spawns") then
+            local spawns = lobby.Spawns:GetChildren()
+            if #spawns > 0 then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = spawns[math.random(1, #spawns)].CFrame + Vector3.new(0, 3, 0)
+            end
+        end
+    end
+end)
+
+CreateAction(Oth, "Телепорт на Карту (Map)", function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local normalMap = workspace:FindFirstChild("Normal")
+        if normalMap and normalMap:FindFirstChild("Spawns") then
+            local spawns = normalMap.Spawns:GetChildren()
+            if #spawns > 0 then
+                LocalPlayer.Character.HumanoidRootPart.CFrame = spawns[math.random(1, #spawns)].CFrame + Vector3.new(0, 3, 0)
+            end
+        end
+    end
+end)
+
 local Info = Instance.new("TextLabel")
 Info.Size = UDim2.new(1, 0, 0, 50)
 Info.BackgroundTransparency = 1
@@ -670,7 +694,7 @@ local function IsVisible(targetPart)
     return not result or result.Instance:IsDescendantOf(targetPart.Parent)
 end
 
-local function GetSmartTarget()
+local function GetSmartTarget(ignoreWalls)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
@@ -682,7 +706,7 @@ local function GetSmartTarget()
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Head") then
             local isMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
             if isMeMurd or (not isMeMurd and isMurd) then
-                if not IsVisible(p.Character.Head) then continue end
+                if not ignoreWalls and not IsVisible(p.Character.Head) then continue end
                 
                 local screenPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
                 if onScreen then
@@ -698,32 +722,34 @@ local function GetSmartTarget()
     return tgt
 end
 
-local function GetSmartTarget()
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-    local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
-    local mPos = UserInputService:GetMouseLocation()
-    local tgt = nil
-    local minD = math.huge
+UserInputService.InputBegan:Connect(function(inp, gameProcessed)
+    if gameProcessed then return end
     
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            local isMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
-            if isMeMurd or (not isMeMurd and isMurd) then
-                if not IsVisible(p.Character.HumanoidRootPart) then continue end
-                local screenPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-                if onScreen then
-                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mPos).Magnitude
-                    if dist < minD then 
-                        minD = dist
-                        tgt = p 
-                    end
-                end
+    if Settings.TPeekBind ~= Enum.KeyCode.Unknown and inp.KeyCode == Settings.TPeekBind then
+        local tgt = GetSmartTarget(true) 
+        local char = LocalPlayer.Character
+        
+        if char and char:FindFirstChild("HumanoidRootPart") and tgt and tgt.Character and tgt.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = char.HumanoidRootPart
+            local targetHrp = tgt.Character.HumanoidRootPart
+            
+            local t = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Knife")
+            
+            if t then
+                t.Parent = char
+                
+                local backPos = targetHrp.Position + (targetHrp.CFrame.LookVector * -3)
+                
+                hrp.CFrame = CFrame.new(backPos, targetHrp.Position)
+                
+                task.spawn(function()
+                    task.wait(0.1)
+                    t:Activate()
+                end)
             end
         end
     end
-    return tgt
-end
+end)
 
 UserInputService.JumpRequest:Connect(function()
     if Settings.InfJump and LocalPlayer.Character then
@@ -775,7 +801,7 @@ RunService.RenderStepped:Connect(function()
     end
 
     if Settings.SilentAim or Settings.Aimlock or Settings.AutoShoot or Settings.NoSpread then 
-        CurrentTarget = GetSmartTarget() 
+        CurrentTarget = GetSmartTarget(false)
     else 
         CurrentTarget = nil 
     end
@@ -827,25 +853,6 @@ RunService.RenderStepped:Connect(function()
                 firetouchinterest(hrp, gDrop, 0)
                 firetouchinterest(hrp, gDrop, 1)
             end
-        end
-    end
-
-    if Settings.TPeek and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        local t = char:FindFirstChildOfClass("Tool")
-        if t and (t.Name == "Gun" or t.Name == "Knife") and not isPeeking then
-            isPeeking = true
-            local targetHrp = CurrentTarget.Character.HumanoidRootPart
-            local oldCFrame = hrp.CFrame
-            
-            hrp.CFrame = CFrame.lookAt((targetHrp.CFrame * CFrame.new(0, 0, 3)).Position, targetHrp.Position)
-            
-            task.wait(0.05)
-            t:Activate()
-            
-            task.wait(0.15)
-            hrp.CFrame = oldCFrame
-            
-            task.delay(0.5, function() isPeeking = false end)
         end
     end
     
@@ -992,8 +999,14 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local method = getnamecallmethod()
     
     if not checkcaller() and (Settings.SilentAim or Settings.NoSpread) and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" or method == "FindPartOnRay" then
-            args[1] = Ray.new(args[1].Origin, (CurrentTarget.Character.HumanoidRootPart.Position - args[1].Origin).Unit * 1000)
+        local targetPos = CurrentTarget.Character.HumanoidRootPart.Position
+        
+        if method == "Raycast" then
+            args[2] = (targetPos - args[1]).Unit * 1000
+            return oldNamecall(self, unpack(args))
+            
+        elseif method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist" or method == "FindPartOnRay" then
+            args[1] = Ray.new(args[1].Origin, (targetPos - args[1].Origin).Unit * 1000)
             return oldNamecall(self, unpack(args))
         end
     end
