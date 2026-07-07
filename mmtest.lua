@@ -851,10 +851,11 @@ local function GetSmartTarget(ignoreWalls)
     return tgt
 end
 
+-- ОБЪЕДИНЕННОЕ И ИСПРАВЛЕННОЕ СОБЫТИЕ ВВОДА
 UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
     
-    -- Меню бинд
+    -- 1. Логика Меню бинда
     if waitM and i.UserInputType == Enum.UserInputType.Keyboard then
         Settings.MenuBind = i.KeyCode
         mb.Text = "[" .. i.KeyCode.Name .. "]"
@@ -864,27 +865,22 @@ UserInputService.InputBegan:Connect(function(i, gp)
         Settings.Visible = not Settings.Visible
         Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -320, 0.5, -240) or UDim2.new(0.5, -320, 1.2, 0)}, 0.4, Enum.EasingStyle.Back)
     end
-    
-    -- Проверяем, что бинд TPeek настроен в меню и клавиша нажата
-    if Settings.TPeek ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.TPeekBind then
+
+    -- 2. Логика Teleport Peek (TPeek)
+    if Settings.TPeekBind ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.TPeekBind then
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 
-        -- Автоматически определяем, кто мы (Мардер или Шериф/Мирный)
         local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
-        
-        -- Поиск цели с учетом ролей и пробития стен
         local mPos = UserInputService:GetMouseLocation()
         local targetPlayer = nil
         local minDistance = math.huge
         
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                -- Проверяем, является ли текущий игрок мардером (ищем нож)
                 local isTargetMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
                 
-                -- Условие: Если мы НЕ мардер (мы шериф), то летим ТОЛЬКО на мардера. Если мы мардер — летим на кого угодно.
                 if isMeMurd or (not isMeMurd and isTargetMurd) then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
                     if onScreen then
@@ -897,6 +893,21 @@ UserInputService.InputBegan:Connect(function(i, gp)
                 end
             end
         end
+
+        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local targetHrp = targetPlayer.Character.HumanoidRootPart
+            local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Knife")
+            
+            if tool then
+                tool.Parent = char 
+                local backPosition = targetHrp.Position + (targetHrp.CFrame.LookVector * -6)
+                hrp.CFrame = CFrame.new(backPosition, targetHrp.Position)
+                task.wait(0.4)
+                tool:Activate()
+            end
+        end
+    end
+end)
 
         -- Если цель найдена, начинаем исполнение
         if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
