@@ -782,7 +782,22 @@ RunService.RenderStepped:Connect(function()
     
     if Settings.AutoGun and hrp then
         local gDrop = workspace:FindFirstChild("GunDrop")
-        if gDrop then hrp.CFrame = gDrop.CFrame end
+        if not gDrop then
+            for _, v in pairs(workspace:GetChildren()) do
+                if v:FindFirstChild("GunDrop") then 
+                    gDrop = v.GunDrop 
+                    break 
+                end
+            end
+        end
+        
+        if gDrop and gDrop:IsA("BasePart") then
+            hrp.CFrame = gDrop.CFrame
+            if firetouchinterest then
+                firetouchinterest(hrp, gDrop, 0)
+                firetouchinterest(hrp, gDrop, 1)
+            end
+        end
     end
     
     -- [ FLING LOGIC FIX ]
