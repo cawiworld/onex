@@ -26,7 +26,8 @@ local Settings = {
     NoSpread = false, NoSpreadBind = Enum.KeyCode.Unknown,
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
     AutoShoot = false, AutoShootBind = Enum.KeyCode.Unknown,
-    TPeek = false, TPeekBind = Enum.KeyCode.Unknown,
+    AntiAim = false, AntiAimBind = Enum.KeyCode.Unknown,
+    AntiKnife = true,
     DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown,
     FOV = 150,
     
@@ -701,7 +702,8 @@ CreateToggle(Gen, "Silent Aim (Невидимая наводка)", "SilentAim")
 CreateToggle(Gen, "NoSpread (Стрелять ровно)", "NoSpread")
 CreateToggle(Gen, "Aimlock (Прицел к цели)", "Aimlock")
 CreateToggle(Gen, "AutoShoot (Умный Triggerbot)", "AutoShoot")
-CreateToggle(Gen, "Teleport Peek", "TPeek")
+CreateToggle(Gen, "Anti-Aim", "AntiAim")
+CreateToggle(Gen, "Anti-Knife", "AntiKnife")
 CreateToggle(Gen, "Отображать FOV", "DrawFOV")
 CreateSlider(Gen, "Размер FOV", 50, 600, "FOV")
 CreateToggle(Gen, "Авто-подбор оружия", "AutoGun")
@@ -855,7 +857,7 @@ end
 UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
     
-    -- 1. Логика Меню бинда
+    -- Меню бинд (Скрытие / Показ меню)
     if waitM and i.UserInputType == Enum.UserInputType.Keyboard then
         Settings.MenuBind = i.KeyCode
         mb.Text = "[" .. i.KeyCode.Name .. "]"
@@ -866,46 +868,10 @@ UserInputService.InputBegan:Connect(function(i, gp)
         Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -320, 0.5, -240) or UDim2.new(0.5, -320, 1.2, 0)}, 0.4, Enum.EasingStyle.Back)
     end
 
-    -- 2. Логика Teleport Peek (TPeek)
-    if Settings.TPeekBind ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.TPeekBind then
-        local char = LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local isMeMurd = char:FindFirstChild("Knife") or (LocalPlayer:FindFirstChild("Backpack") and LocalPlayer.Backpack:FindFirstChild("Knife"))
-        local mPos = UserInputService:GetMouseLocation()
-        local targetPlayer = nil
-        local minDistance = math.huge
-        
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local isTargetMurd = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
-                
-                if isMeMurd or (not isMeMurd and isTargetMurd) then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-                    if onScreen then
-                        local distToCursor = (Vector2.new(screenPos.X, screenPos.Y) - mPos).Magnitude
-                        if distToCursor <= Settings.FOV and distToCursor < minDistance then 
-                            minDistance = distToCursor
-                            targetPlayer = p 
-                        end
-                    end
-                end
-            end
-        end
-
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local targetHrp = targetPlayer.Character.HumanoidRootPart
-            local tool = char:FindFirstChildOfClass("Tool") or LocalPlayer.Backpack:FindFirstChild("Gun") or LocalPlayer.Backpack:FindFirstChild("Knife")
-            
-            if tool then
-                tool.Parent = char 
-                local backPosition = targetHrp.Position + (targetHrp.CFrame.LookVector * -6)
-                hrp.CFrame = CFrame.new(backPosition, targetHrp.Position)
-                task.wait(0.4)
-                tool:Activate()
-            end
-        end
+    -- Быстрое переключение Anti-Aim по кнопке на клавиатуре (Клавиша X)
+    if not waitM and Settings.AntiAimBind ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.AntiAimBind then
+        Settings.AntiAim = not Settings.AntiAim
+        SaveConfig()
     end
 end)
 
@@ -1022,6 +988,42 @@ RunService.RenderStepped:Connect(function()
         CurrentTarget = GetSmartTarget(false)
     else 
         CurrentTarget = nil 
+    end
+
+    if Settings.AntiKnife and hrp then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local hasKnife = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
+                if hasKnife then
+                    local targetHrp = p.Character.HumanoidRootPart
+                    local distance = (hrp.Position - targetHrp.Position).Magnitude
+                    -- Если убийца подошел ближе 13 студов, моментально подбрасываем себя вверх
+                    if distance < 13 then
+                        hrp.CFrame = hrp.CFrame + Vector3.new(0, 18, 0)
+                    end
+                end
+            end
+        end
+    end
+
+    -- ЛОГИКА JITTER ANTI-AIM & FAKE PITCH
+    if Settings.AntiAim and hrp then
+        local oldCFrame = hrp.CFrame
+        local fakePitch = math.rad(-85) -- Имитируем жесткий взгляд в пол для чужих рейкастов
+        local randomYaw = math.rad(math.random(-180, 180)) -- Крутимся на 360 градусов со скоростью света
+        
+        -- Смещаем хитбокс в случайную сторону на 2 студа (Desync/Рассинхрон)
+        local jitterOffset = Vector3.new(math.random(-20, 20) / 10, 0, math.random(-20, 20) / 10)
+        
+        -- Отправляем серверу фейковую позицию
+        hrp.CFrame = oldCFrame * CFrame.Angles(fakePitch, randomYaw, 0) + jitterOffset
+        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-50, 50), 0, math.random(-50, 50)) -- Ломаем Silent Aim
+        
+        -- Моментально возвращаем позицию локально, чтобы на вашем экране вас не трясло
+        RunService.RenderStepped:Wait()
+        if hrp and hrp.Parent then
+            hrp.CFrame = oldCFrame
+        end
     end
 
     local char = LocalPlayer.Character
@@ -1225,4 +1227,53 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
         end
     end
     return oldNamecall(self, ...)
+end)
+
+-- [ ANTI-AIM ]
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    
+    if not hrp or not humanoid or humanoid.Health <= 0 then return end
+    
+    if Settings.AntiKnife then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local hasKnife = p.Character:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
+                
+                if hasKnife then
+                    local targetHrp = p.Character.HumanoidRootPart
+                    local distance = (hrp.Position - targetHrp.Position).Magnitude
+                    
+                    if distance < 13 then
+                        hrp.CFrame = hrp.CFrame + Vector3.new(0, 18, 0)
+                        
+                    end
+                end
+            end
+        end
+    end
+
+    if Settings.AntiAim then
+        local oldCFrame = hrp.CFrame
+        
+        local fakePitch = math.rad(-85)
+        local randomYaw = math.rad(math.random(-180, 180))
+
+        local jitterOffset = Vector3.new(
+            math.random(-25, 25) / 10,
+            0,
+            math.random(-25, 25) / 10
+        )
+        
+        hrp.CFrame = oldCFrame * CFrame.Angles(fakePitch, randomYaw, 0) + jitterOffset
+        
+        hrp.AssemblyLinearVelocity = Vector3.new(math.random(-50, 50), 0, math.random(-50, 50))
+        
+        RunService.RenderStepped:Wait()
+        if hrp and hrp.Parent then
+            hrp.CFrame = oldCFrame
+        end
+    end
 end)
