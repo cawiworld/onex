@@ -534,7 +534,7 @@ local function UpdateHUD()
     local bindsMap = {
         Aimlock="Aimlock", SilentAim="Silent Aim", NoSpread="NoSpread", AutoShoot="AutoShoot", 
         InfJump="Inf Jump", Noclip="Noclip", SpeedHack="Speed", JumpHack="Jump", 
-        Spinbot="Spinbot", Fling="Рванка", AntiFling="Антирванка", Nightmode="Nightmode"
+        Spinbot="Spinbot", Fling="Rvanka", AntiFling="Antirvanka", TPeek="TPeek", Nightmode="Nightmode"
     }
     for key, name in pairs(bindsMap) do
         if Settings[key] then
