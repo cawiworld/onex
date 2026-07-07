@@ -870,7 +870,7 @@ UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
     
     -- Проверяем, что бинд TPeek настроен в меню и клавиша нажата
-    if Settings.TPeekBind ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.TPeekBind then
+    if Settings.TPeek ~= Enum.KeyCode.Unknown and i.KeyCode == Settings.TPeekBind then
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
