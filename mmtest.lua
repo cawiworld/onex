@@ -27,7 +27,6 @@ local Settings = {
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
     AutoShoot = false, AutoShootBind = Enum.KeyCode.Unknown,
     AntiAim = false, AntiAimBind = Enum.KeyCode.Unknown,
-    AntiKnife = true,
     DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown,
     FOV = 150,
     
