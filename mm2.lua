@@ -759,8 +759,94 @@ end)
 
 local shootDebounce = false
 
+local function UpdateESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local char = p.Character
+            local hasKnife = char:FindFirstChild("Knife") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Knife"))
+            local hasGun = char:FindFirstChild("Gun") or (p:FindFirstChild("Backpack") and p.Backpack:FindFirstChild("Gun"))
+            
+            local shouldShow = false
+            local color = Settings.InnocentColor
+            local role = "Innocent"
+
+            if hasKnife then
+                shouldShow = Settings.MurdESP
+                color = Settings.MurdColor
+                role = "Murderer"
+            elseif hasGun then
+                shouldShow = Settings.SheriffESP
+                color = Settings.SheriffColor
+                role = "Sheriff"
+            else
+                shouldShow = Settings.InnocentESP
+            end
+
+            local hl = char:FindFirstChild("onehvh_HL")
+            if shouldShow then
+                if not hl then
+                    hl = Instance.new("Highlight")
+                    hl.Name = "onehvh_HL"
+                    hl.FillTransparency = 0.6
+                    hl.OutlineTransparency = 0.1
+                    hl.Parent = char
+                end
+                hl.FillColor = color
+                hl.OutlineColor = color
+            elseif hl then
+                hl:Destroy()
+            end
+
+            local head = char:FindFirstChild("Head")
+            if head then
+                local bg = head:FindFirstChild("onehvh_Name")
+                if shouldShow and Settings.NamesESP then
+                    if not bg then
+                        bg = Instance.new("BillboardGui")
+                        bg.Name = "onehvh_Name"
+                        bg.Size = UDim2.new(0, 150, 0, 40)
+                        bg.StudsOffset = Vector3.new(0, 2.5, 0)
+                        bg.AlwaysOnTop = true
+                        bg.Parent = head
+                        
+                        local txt = Instance.new("TextLabel")
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.TextStrokeTransparency = 0.3
+                        txt.Font = Settings.ESPFont
+                        txt.TextSize = 13
+                        txt.Parent = bg
+                    end
+                    bg.TextLabel.Text = p.Name .. " [" .. role .. "]"
+                    bg.TextLabel.TextColor3 = color
+                elseif bg then
+                    bg:Destroy()
+                end
+            end
+        end
+    end
+
+    local gunDrop = Workspace:FindFirstChild("GunDrop")
+    if gunDrop then
+        local hl = gunDrop:FindFirstChild("onehvh_HL")
+        if Settings.GunESP then
+            if not hl then
+                hl = Instance.new("Highlight")
+                hl.Name = "onehvh_HL"
+                hl.FillColor = Settings.GunColor
+                hl.OutlineColor = Settings.GunColor
+                hl.FillTransparency = 0.5
+                hl.Parent = gunDrop
+            end
+        elseif hl then
+            hl:Destroy()
+        end
+    end
+end
+
 RunService.RenderStepped:Connect(function()
     UpdateHUD()
+    UpdateESP()
     local thm = GetThemeColor()
     WMText.Text = "<font color='#" .. thm:ToHex() .. "'>one.hvh</font> MM2 | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
     Watermark.Size = UDim2.new(0, WMText.TextBounds.X + 16, 0, 26)
