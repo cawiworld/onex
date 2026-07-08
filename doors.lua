@@ -141,6 +141,14 @@ Main.Active = true
 Main.Draggable = true
 Main.Parent = SG
 
+local MouseUnlocker = Instance.new("TextButton")
+MouseUnlocker.Name = "MouseUnlocker"
+MouseUnlocker.Size = UDim2.new(0, 0, 0, 0)
+MouseUnlocker.BackgroundTransparency = 1
+MouseUnlocker.Text = ""
+MouseUnlocker.Modal = Settings.Visible
+MouseUnlocker.Parent = Main
+
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = Main
@@ -619,6 +627,9 @@ UserInputService.InputBegan:Connect(function(i, gp)
         SaveConfig()
     elseif not waitM and i.KeyCode == Settings.MenuBind and Settings.MenuBind ~= Enum.KeyCode.Unknown then
         Settings.Visible = not Settings.Visible
+
+        MouseUnlocker.Modal = Settings.Visible
+            
         Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -320, 0.5, -240) or UDim2.new(0.5, -320, 1.2, 0)}, 0.4, Enum.EasingStyle.Back)
     end
 end)
