@@ -647,11 +647,15 @@ CreateSlider(Wld, "Цвет Меню (Синий)", 0, 255, "UIColorB")
 local Info = Instance.new("TextLabel")
 Info.Size = UDim2.new(1, -5, 0, 40)
 Info.BackgroundTransparency = 1
-Info.Text = "one.hvh v2.0 FINAL\nРазработчик: cawiworld"
+Info.Text = "one.hvh v2.0\nРазработчик: cawiworld"
 Info.TextColor3 = Color3.fromRGB(100, 100, 100)
 Info.Font = Enum.Font.Gotham
 Info.TextSize = 12
 Info.Parent = Oth
+CreateAction(Oth, "Сохранить конфиг", function()
+    SaveConfig()
+    print("Конфиг сохранен!")
+end)
 
 -- RTX EFFECTS SETUP
 local RTX_CC = Instance.new("ColorCorrectionEffect")
@@ -772,11 +776,17 @@ RunService.RenderStepped:Connect(function()
 
     if Settings.Nightmode then
         Lighting.TimeOfDay = "00:00:00"
+        Lighting.Ambient = Color3.fromRGB(0, 0, 0)
+        Lighting.OutdoorAmbient = Color3.fromRGB(0, 0, 0)
     elseif Settings.FullBright then
-        Lighting.Ambient = Color3.new(1, 1, 1)
+        Lighting.TimeOfDay = "12:00:00"
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
     else
-        Lighting.Ambient = OriginalLighting.Ambient
         Lighting.TimeOfDay = OriginalLighting.TimeOfDay
+        local customColor = Color3.fromRGB(Settings.WorldR, Settings.WorldG, Settings.WorldB)
+        Lighting.Ambient = customColor
+        Lighting.OutdoorAmbient = customColor
     end
     
     RTX_CC.Enabled = Settings.RTX
@@ -835,10 +845,18 @@ RunService.RenderStepped:Connect(function()
     end
 
     if hum then
-        if Settings.SpeedHack then hum.WalkSpeed = Settings.WalkSpeed end
+        if Settings.SpeedHack then 
+            hum.WalkSpeed = Settings.WalkSpeed 
+        else
+            hum.WalkSpeed = 16
+        end
+        
         if Settings.JumpHack then
             hum.UseJumpPower = true
             hum.JumpPower = Settings.JumpPower
+        else
+            hum.UseJumpPower = true
+            hum.JumpPower = 50
         end
     end
 end)
