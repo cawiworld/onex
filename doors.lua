@@ -28,6 +28,9 @@ local Settings = {
     WalkSpeed = 21,
     JumpHack = false, JumpHackBind = Enum.KeyCode.Unknown,
     JumpPower = 60,
+    AACSpeed = false,
+    AACNoclip = false,
+    AACSpeedValue = 0.14,
 
     EntityESP = true, EntityESPBind = Enum.KeyCode.Unknown,
     ItemESP = true, ItemESPBind = Enum.KeyCode.Unknown,
@@ -540,11 +543,13 @@ local Gen = CreatePage("General")
 local Esp = CreatePage("ESP")
 local Wld = CreatePage("World")
 local Oth = CreatePage("Other")
+local Aac = CreatePage("one.aac")
 
 CreateTab("General")
 CreateTab("ESP")
 CreateTab("World")
 CreateTab("Other")
+CreateTab("one.aac")
 SwitchTab("General")
 
 CreateToggle(Gen, "Бесконечный прыжок", "InfJump")
@@ -557,6 +562,21 @@ CreateSlider(Gen, "Прыжок", 50, 75, "JumpPower")
 CreateToggle(Esp, "Сущности (Rush, Ambush, Figure...)", "EntityESP")
 CreateToggle(Esp, "Предметы (Ключи, Монеты, Лут)", "ItemESP")
 CreateToggle(Esp, "Двери", "DoorESP")
+
+CreateToggle(Aac, "one.aac Speed (CFrame Bypass)", "AACSpeed")
+CreateSlider(Aac, "Сила подталкивания", 10, 25, "AACSpeedValue")
+CreateToggle(Aac, "one.aac Noclip (Phase Bypass)", "AACNoclip")
+
+local AACInfo = Instance.new("TextLabel")
+AACInfo.Size = UDim2.new(1, -5, 0, 70)
+AACInfo.BackgroundTransparency = 1
+AACInfo.Text = "one.aac - это наш проект по обходам анти-читов в играх. Мы делаем интересные bypass-тесты, что-бы античит детектил в разы меньше наших функций, нежели у других читов."
+AACInfo.TextColor3 = Color3.fromRGB(120, 120, 130)
+AACInfo.Font = Enum.Font.GothamMedium
+AACInfo.TextSize = 12
+AACInfo.TextWrapped = true
+AACInfo.TextXAlignment = Enum.TextXAlignment.Center
+AACInfo.Parent = Aac
 
 CreateToggle(Wld, "Nightmode (Темнота везде)", "Nightmode")
 CreateToggle(Wld, "FullBright (Отключить темноту)", "FullBright")
@@ -696,9 +716,60 @@ RunService.RenderStepped:Connect(function()
             Lighting.Ambient = OriginalLighting.Ambient
             Lighting.OutdoorAmbient = OriginalLighting.OutdoorAmbient
         end
+
+        local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        
+        if hum then
+            if Settings.SpeedHack and not Settings.AACSpeed then 
+                hum.WalkSpeed = Settings.WalkSpeed 
+            end
+            
+            if Settings.JumpHack then 
+                hum.UseJumpPower = true
+                hum.JumpPower = Settings.JumpPower 
+            end
+
+            if Settings.AACSpeed and not Settings.SpeedHack then
+                hum.WalkSpeed = 16
+                
+                if hum.MoveDirection.Magnitude > 0 and hrp then
+                    local bypassStep = Settings.AACSpeedValue / 100
+                    hrp.CFrame = hrp.CFrame + (hum.MoveDirection * bypassStep)
+                end
+            end
+            
+            if Settings.AACNoclip then
+                if hrp then
+                    for _, part in pairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                            part.CanCollide = false
+                        end
+                    end
+                    
+                    if hum.MoveDirection.Magnitude > 0 then
+                        local raycastParams = RaycastParams.new()
+                        raycastParams.FilterDescendantsInstances = {char}
+                        raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                        
+                        local raycastResult = workspace:Raycast(hrp.Position, hum.MoveDirection * 2.5, raycastParams)
+                        
+                        if raycastResult and raycastResult.Instance then
+                            hrp.CFrame = hrp.CFrame + (hum.MoveDirection * 3.5)
+                        end
+                    end
+                end
+            elseif wasNoclip and not Settings.Noclip then
+                wasNoclip = false
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = true end
+                end
+            end
+        end
     end
 
-    local char = LocalPlayer.Character
     if char then
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
