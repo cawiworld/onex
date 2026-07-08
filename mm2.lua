@@ -844,6 +844,19 @@ RunService.RenderStepped:Connect(function()
         Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, CurrentTarget.Character.HumanoidRootPart.Position)
     end
 
+    if Settings.AutoShoot and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
+        local gun = char:FindFirstChild("Gun")
+        if gun and not shootDebounce then
+            shootDebounce = true
+            if mouse1click then 
+                mouse1click() 
+            else
+                game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
+            end
+            task.delay(0.4, function() shootDebounce = false end)
+        end
+    end
+
     if hum then
         if Settings.SpeedHack then 
             hum.WalkSpeed = Settings.WalkSpeed 
@@ -878,9 +891,10 @@ oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
     local args = {...}
     local method = getnamecallmethod()
     
-    if not checkcaller() and (Settings.SilentAim or Settings.NoSpread) and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
+    if not checkcaller() and Settings.SilentAim and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
         if method == "FireServer" or method == "InvokeServer" then
-            if self.Name == "ShootGun" then
+            local isShoot = string.find(string.lower(self.Name), "shoot") or string.find(string.lower(self.Name), "fire")
+            if isShoot or typeof(args[1]) == "Vector3" or typeof(args[2]) == "Vector3" then
                 for i, v in ipairs(args) do
                     if typeof(v) == "Vector3" then
                         args[i] = CurrentTarget.Character.Head.Position
