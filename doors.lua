@@ -195,7 +195,6 @@ local function CreateAction(parent, text, cb)
     end)
 end
 
--- [ TABS GENERATION ]
 local Gen = CreatePage("General")
 local Esp = CreatePage("ESP")
 local Wld = CreatePage("World")
@@ -207,7 +206,6 @@ CreateTab("World")
 CreateTab("one.aac")
 SwitchTab("General")
 
--- GENERAL
 CreateToggle(Gen, "Noclip (Сквозь стены)", "Noclip")
 CreateToggle(Gen, "SpeedHack", "SpeedHack")
 CreateSlider(Gen, "Скорость", 16, 24, "WalkSpeed")
@@ -231,16 +229,14 @@ local function GetCurrentRoom()
 end
 
 CreateSlider(Gen, "Выбор комнаты (Телепорт)", 0, 100, "TargetRoom")
-CreateAction(Gen, "⚡ Телепорт (Макс +20 дверей)", function()
+CreateAction(Gen, "Телепорт (Макс 20 дверей)", function()
     local currentRoomNum = GetCurrentRoom()
-    -- Лимит защиты античита: можно прыгнуть максимум на 20 комнат вперед от текущей позиции
     local safeTarget = math.clamp(Settings.TargetRoom, 0, currentRoomNum + 20)
     
     local targetRoomModel = workspace.CurrentRooms:FindFirstChild(tostring(safeTarget))
     if targetRoomModel then
         local dest = targetRoomModel:FindFirstChild("RoomEntrance")
         if dest and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            -- Мягкий телепорт, чтобы избежать кика
             LocalPlayer.Character.HumanoidRootPart.CFrame = dest.CFrame + Vector3.new(0, 3, 0)
         end
     end
@@ -259,12 +255,12 @@ CreateToggle(Wld, "No Shadows", "NoShadows")
 CreateSlider(Wld, "Red", 0, 255, "WorldR") CreateSlider(Wld, "Green", 0, 255, "WorldG") CreateSlider(Wld, "Blue", 0, 255, "WorldB")
 
 -- ONE.AAC
-CreateToggle(Aac, "⚡ Включить one.aac Bypass", "AACEnabled")
+CreateToggle(Aac, "Включить one.aac Bypass", "AACEnabled")
 CreateSlider(Aac, "Сила CFrame (Speed)", 10, 25, "AACSpeedValue")
-CreateToggle(Aac, "👁️ Авто-наводка на Скрича (Screech)", "AutoScreech")
+CreateToggle(Aac, "Авто-наводка на Скрича (Screech)", "AutoScreech")
 
 local AACInfo = Instance.new("TextLabel", Aac)
-AACInfo.Size = UDim2.new(1, -5, 0, 70) AACInfo.BackgroundTransparency = 1 AACInfo.Text = "one.aac - это наш проект по обходам анти-читов. Если Bypass ВКЛЮЧЕН, то обычные функции (Speed, Noclip) будут использовать CFrame и Phase-методы для обмана сервера." AACInfo.TextColor3 = Color3.fromRGB(120, 120, 130) AACInfo.Font = Enum.Font.GothamMedium AACInfo.TextSize = 12 AACInfo.TextWrapped = true AACInfo.TextXAlignment = Enum.TextXAlignment.Left
+AACInfo.Size = UDim2.new(1, -5, 0, 70) AACInfo.BackgroundTransparency = 1 AACInfo.Text = "one.aac - это наш проект по обходам анти-читов. Если Bypass ВКЛЮЧЕН, то обычные функции (Speed, Noclip) будут использовать CFrame и Phase-методы для обмана сервера." AACInfo.TextColor3 = Color3.fromRGB(120, 120, 130) AACInfo.Font = Enum.Font.GothamMedium AACInfo.TextSize = 12 AACInfo.TextWrapped = true AACInfo.TextXAlignment = Enum.TextXAlignment.Center
 
 -- [ LOGIC CORE ]
 UserInputService.InputBegan:Connect(function(i, gp)
