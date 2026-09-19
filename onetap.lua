@@ -1,6 +1,3 @@
--- one.hvh - best hvh cheat in roblox community
--- version: 1.01
--- author: relosterpc
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
@@ -17,32 +14,28 @@ if CoreGui:FindFirstChild("onehvh_Hub") then CoreGui.onehvh_Hub:Destroy() end
 if CoreGui:FindFirstChild("onehvh_HUD") then CoreGui.onehvh_HUD:Destroy() end
 
 local Settings = {
-    Visible = true, 
-    CurrentTab = "Combat", 
+    Visible = true,
+    CurrentTab = "Combat",
     MenuBind = Enum.KeyCode.RightControl,
 
     SilentAim = false, SilentAimBind = Enum.KeyCode.Unknown,
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
-    AimVisibleOnly = true, AimVisibleOnlyBind = Enum.KeyCode.Unknown,
+    VisibleOnly = true, VisibleOnlyBind = Enum.KeyCode.Unknown,
     Triggerbot = false, TriggerbotBind = Enum.KeyCode.Unknown,
-    AutoScope = false, AutoScopeBind = Enum.KeyCode.Unknown,
-    DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown, 
+    Autoscope = false, AutoscopeBind = Enum.KeyCode.Unknown,
+    DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown,
     FOV = 120,
 
     SlowWalk = false, SlowWalkBind = Enum.KeyCode.LeftShift, SlowWalkSpeed = 8,
-    SpeedHack = false, SpeedHackBind = Enum.KeyCode.Unknown, WalkSpeed = 24,
-    JumpHack = false, JumpHackBind = Enum.KeyCode.Unknown, JumpPower = 55,
-    InfJump = false, InfJumpBind = Enum.KeyCode.Unknown,
-    Noclip = false, NoclipBind = Enum.KeyCode.Unknown,
 
-    AllPlayersESP = true, AllPlayersESPBind = Enum.KeyCode.Unknown,
-    NamesESP = true, NamesESPBind = Enum.KeyCode.Unknown,
+    PlayerESP = true, PlayerESPBind = Enum.KeyCode.Unknown,
+    NameESP = true, NameESPBind = Enum.KeyCode.Unknown,
     EnemyColorR = 255, EnemyColorG = 50, EnemyColorB = 50,
     PriorityColorR = 255, PriorityColorG = 215, PriorityColorB = 0,
     PriorityPlayers = {},
 
     Nightmode = false, NightmodeBind = Enum.KeyCode.Unknown,
-    FullBright = false, FullBrightBind = Enum.KeyCode.Unknown,
+    Fullbright = false, FullbrightBind = Enum.KeyCode.Unknown,
     NoShadows = false, NoShadowsBind = Enum.KeyCode.Unknown,
     RTX = false, RTXBind = Enum.KeyCode.Unknown,
     WorldR = 255, WorldG = 255, WorldB = 255,
@@ -51,7 +44,6 @@ local Settings = {
 }
 
 local CurrentTarget = nil
-local wasNoclip = false
 local isSlowWalkActive = false
 local isScoping = false
 local triggerDebounce = false
@@ -63,7 +55,7 @@ local OriginalLighting = {
     GlobalShadows = Lighting.GlobalShadows
 }
 
-local cfgName = "onehvh_onetap_config.json"
+local cfgName = "onehvh_onetap_cfg.json"
 
 local function SaveConfig()
     if not writefile then return end
@@ -171,8 +163,8 @@ WMText.Size = UDim2.new(1, -16, 1, 0)
 WMText.Position = UDim2.new(0, 8, 0, 0)
 WMText.BackgroundTransparency = 1
 WMText.TextColor3 = Color3.fromRGB(255, 255, 255)
-WMText.Font = Enum.Font.GothamMedium
-WMText.TextSize = 13
+WMText.Font = Enum.Font.SourceSansBold
+WMText.TextSize = 14
 WMText.TextXAlignment = Enum.TextXAlignment.Left
 WMText.RichText = true
 WMText.Parent = Watermark
@@ -185,7 +177,7 @@ HUDCont.Parent = HUD
 
 local HList = Instance.new("UIListLayout")
 HList.VerticalAlignment = Enum.VerticalAlignment.Bottom
-HList.Padding = UDim.new(0, 5)
+HList.Padding = UDim.new(0, 4)
 HList.Parent = HUDCont
 
 local function UpdateHUD()
@@ -194,18 +186,17 @@ local function UpdateHUD()
     end
     local bindsMap = {
         Aimlock = "Aimlock", SilentAim = "Silent Aim", Triggerbot = "Triggerbot",
-        AutoScope = "Autoscope", SlowWalk = "Slow Walk", SpeedHack = "Speed",
-        JumpHack = "Jump", InfJump = "Inf Jump", Noclip = "Noclip"
+        Autoscope = "Autoscope", SlowWalk = "Slow Walk"
     }
     for k, name in pairs(bindsMap) do
         if Settings[k] then
             local L = Instance.new("TextLabel")
-            L.Size = UDim2.new(1, 0, 0, 20)
+            L.Size = UDim2.new(1, 0, 0, 18)
             L.BackgroundTransparency = 1
             L.Text = name .. " [ON]"
             L.TextColor3 = GetThemeColor()
-            L.Font = Enum.Font.GothamBold
-            L.TextSize = 13
+            L.Font = Enum.Font.SourceSansBold
+            L.TextSize = 14
             L.TextXAlignment = Enum.TextXAlignment.Right
             L.TextStrokeTransparency = 0.3
             L.Parent = HUDCont
@@ -219,68 +210,58 @@ SG.Parent = CoreGui
 SG.ResetOnSpawn = false
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 640, 0, 480)
-Main.Position = UDim2.new(0.5, -320, 0.5, -240)
+Main.Size = UDim2.new(0, 620, 0, 450)
+Main.Position = UDim2.new(0.5, -310, 0.5, -225)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Main.BackgroundTransparency = 0.3
+Main.BackgroundTransparency = 0.25
 Main.Active = true
 Main.Draggable = true
 Main.Parent = SG
 
 local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.CornerRadius = UDim.new(0, 10)
 MainCorner.Parent = Main
 
 MStroke = Instance.new("UIStroke")
 MStroke.Color = GetThemeColor()
-MStroke.Transparency = 0.7
+MStroke.Transparency = 0.6
 MStroke.Thickness = 1.5
 MStroke.Parent = Main
 
-local Shadow = Instance.new("ImageLabel")
-Shadow.Size = UDim2.new(1, 60, 1, 60)
-Shadow.Position = UDim2.new(0, -30, 0, -30)
-Shadow.BackgroundTransparency = 1
-Shadow.Image = "rbxassetid://1316045217"
-Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-Shadow.ImageTransparency = 0.4
-Shadow.ZIndex = -1
-Shadow.Parent = Main
-
 local Sidebar = Instance.new("Frame")
-Sidebar.Size = UDim2.new(0, 170, 1, 0)
+Sidebar.Size = UDim2.new(0, 160, 1, 0)
 Sidebar.BackgroundColor3 = Color3.fromRGB(10, 10, 14)
-Sidebar.BackgroundTransparency = 0.4
+Sidebar.BackgroundTransparency = 0.3
 Sidebar.Parent = Main
 
 local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 12)
+SidebarCorner.CornerRadius = UDim.new(0, 10)
 SidebarCorner.Parent = Sidebar
 
 Logo = Instance.new("TextLabel")
-Logo.Size = UDim2.new(1, 0, 0, 70)
-Logo.Position = UDim2.new(0, 20, 0, 10)
+Logo.Size = UDim2.new(1, 0, 0, 60)
+Logo.Position = UDim2.new(0, 15, 0, 10)
 Logo.RichText = true
 Logo.Text = "<font color='#FFFFFF'>one.</font><font color='#" .. GetThemeColor():ToHex() .. "'>hvh</font>"
-Logo.TextSize = 30
-Logo.Font = Enum.Font.GothamBold
+Logo.TextSize = 28
+Logo.Font = Enum.Font.SourceSansBold
 Logo.TextXAlignment = Enum.TextXAlignment.Left
 Logo.BackgroundTransparency = 1
 Logo.Parent = Sidebar
 
 local TabCont = Instance.new("Frame")
-TabCont.Size = UDim2.new(1, -20, 1, -90)
-TabCont.Position = UDim2.new(0, 10, 0, 80)
+TabCont.Size = UDim2.new(1, -20, 1, -80)
+TabCont.Position = UDim2.new(0, 10, 0, 70)
 TabCont.BackgroundTransparency = 1
 TabCont.Parent = Sidebar
 
 local TList = Instance.new("UIListLayout")
-TList.Padding = UDim.new(0, 8)
+TList.Padding = UDim.new(0, 6)
 TList.Parent = TabCont
 
 local PageCont = Instance.new("Frame")
-PageCont.Size = UDim2.new(1, -190, 1, -30)
-PageCont.Position = UDim2.new(0, 180, 0, 15)
+PageCont.Size = UDim2.new(1, -180, 1, -20)
+PageCont.Position = UDim2.new(0, 170, 0, 10)
 PageCont.BackgroundTransparency = 1
 PageCont.Parent = Main
 
@@ -300,7 +281,7 @@ local function CreatePage(name)
 
     local Pad = Instance.new("UIPadding")
     Pad.PaddingTop = UDim.new(0, 2)
-    Pad.PaddingRight = UDim.new(0, 5)
+    Pad.PaddingRight = UDim.new(0, 6)
     Pad.Parent = P
 
     Pages[name] = P
@@ -316,46 +297,44 @@ local function SwitchTab(name)
             for _, child in ipairs(p:GetChildren()) do
                 if child:IsA("Frame") then 
                     local orig = child.Position
-                    child.Position = child.Position + UDim2.new(0, 15, 0, 0)
+                    child.Position = child.Position + UDim2.new(0, 12, 0, 0)
                     child.BackgroundTransparency = 1
-                    Tween(child, {Position = orig, BackgroundTransparency = 0.6}, 0.35, Enum.EasingStyle.Cubic) 
+                    Tween(child, {Position = orig, BackgroundTransparency = 0.5}, 0.25, Enum.EasingStyle.Cubic) 
                 end
             end
         end
     end
     for n, b in pairs(Tabs) do
         local sel = (n == name)
-        Tween(b, {BackgroundColor3 = sel and GetThemeColor() or Color3.fromRGB(20, 20, 25), BackgroundTransparency = sel and 0.6 or 1}, 0.2)
-        Tween(b.TextLabel, {TextColor3 = sel and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(130, 130, 130)}, 0.2)
+        Tween(b, {BackgroundColor3 = sel and GetThemeColor() or Color3.fromRGB(20, 20, 25), BackgroundTransparency = sel and 0.5 or 1}, 0.2)
+        Tween(b.TextLabel, {TextColor3 = sel and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)}, 0.2)
     end
 end
 
 local function CreateTab(name)
     local B = Instance.new("TextButton")
-    B.Size = UDim2.new(1, 0, 0, 36)
+    B.Size = UDim2.new(1, 0, 0, 34)
     B.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     B.BackgroundTransparency = 1
     B.Text = ""
     B.Parent = TabCont
 
     local BCorner = Instance.new("UICorner")
-    BCorner.CornerRadius = UDim.new(0, 8)
+    BCorner.CornerRadius = UDim.new(0, 6)
     BCorner.Parent = B
 
     local L = Instance.new("TextLabel")
     L.Size = UDim2.new(1, -15, 1, 0)
     L.Position = UDim2.new(0, 15, 0, 0)
     L.Text = name
-    L.TextColor3 = Color3.fromRGB(130, 130, 130)
-    L.Font = Enum.Font.GothamMedium
-    L.TextSize = 14
+    L.TextColor3 = Color3.fromRGB(150, 150, 150)
+    L.Font = Enum.Font.SourceSansBold
+    L.TextSize = 15
     L.TextXAlignment = Enum.TextXAlignment.Left
     L.BackgroundTransparency = 1
     L.Parent = B
 
     B.MouseButton1Click:Connect(function() SwitchTab(name) end)
-    B.MouseEnter:Connect(function() if Settings.CurrentTab ~= name then Tween(L, {TextColor3 = Color3.fromRGB(200, 200, 200)}, 0.1) end end)
-    B.MouseLeave:Connect(function() if Settings.CurrentTab ~= name then Tween(L, {TextColor3 = Color3.fromRGB(130, 130, 130)}, 0.1) end end)
     Tabs[name] = B
 end
 
@@ -364,34 +343,29 @@ local function CreateToggle(parent, text, key)
     if Settings[bindKey] == nil then Settings[bindKey] = Enum.KeyCode.Unknown end
 
     local F = Instance.new("Frame")
-    F.Size = UDim2.new(1, -5, 0, 44)
+    F.Size = UDim2.new(1, -5, 0, 40)
     F.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    F.BackgroundTransparency = 0.6
+    F.BackgroundTransparency = 0.5
     F.Parent = parent
 
     local FCorner = Instance.new("UICorner")
-    FCorner.CornerRadius = UDim.new(0, 8)
+    FCorner.CornerRadius = UDim.new(0, 6)
     FCorner.Parent = F
-
-    local S = Instance.new("UIStroke")
-    S.Color = Color3.fromRGB(255, 255, 255)
-    S.Transparency = 0.9
-    S.Parent = F
 
     local L = Instance.new("TextLabel")
     L.Size = UDim2.new(0.6, 0, 1, 0)
-    L.Position = UDim2.new(0, 15, 0, 0)
+    L.Position = UDim2.new(0, 12, 0, 0)
     L.Text = text
     L.TextColor3 = Color3.fromRGB(230, 230, 230)
-    L.Font = Enum.Font.GothamMedium
-    L.TextSize = 13
+    L.Font = Enum.Font.SourceSansBold
+    L.TextSize = 15
     L.TextXAlignment = Enum.TextXAlignment.Left
     L.BackgroundTransparency = 1
     L.Parent = F
 
     local Bg = Instance.new("Frame")
-    Bg.Size = UDim2.new(0, 40, 0, 20)
-    Bg.Position = UDim2.new(1, -50, 0, 12)
+    Bg.Size = UDim2.new(0, 38, 0, 18)
+    Bg.Position = UDim2.new(1, -48, 0, 11)
     Bg.BackgroundColor3 = Settings[key] and GetThemeColor() or Color3.fromRGB(45, 45, 50)
     Bg.Parent = F
     
@@ -402,8 +376,8 @@ local function CreateToggle(parent, text, key)
     BgCorner.Parent = Bg
 
     local C = Instance.new("Frame")
-    C.Size = UDim2.new(0, 16, 0, 16)
-    C.Position = Settings[key] and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2)
+    C.Size = UDim2.new(0, 14, 0, 14)
+    C.Position = Settings[key] and UDim2.new(1, -16, 0, 2) or UDim2.new(0, 2, 0, 2)
     C.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     C.Parent = Bg
 
@@ -412,16 +386,16 @@ local function CreateToggle(parent, text, key)
     CCorner.Parent = C
 
     local currentBind = Settings[bindKey]
-    local bindName = currentBind == Enum.KeyCode.Unknown and "[None]" or "[" .. currentBind.Name .. "]"
+    local bindName = currentBind == Enum.KeyCode.Unknown and "[-]" or "[" .. currentBind.Name .. "]"
 
     local BBg = Instance.new("TextButton")
-    BBg.Size = UDim2.new(0, 48, 0, 20)
-    BBg.Position = UDim2.new(1, -105, 0, 12)
+    BBg.Size = UDim2.new(0, 50, 0, 18)
+    BBg.Position = UDim2.new(1, -104, 0, 11)
     BBg.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
     BBg.Text = bindName
-    BBg.TextColor3 = Color3.fromRGB(150, 150, 150)
-    BBg.Font = Enum.Font.Gotham
-    BBg.TextSize = 11
+    BBg.TextColor3 = Color3.fromRGB(160, 160, 160)
+    BBg.Font = Enum.Font.SourceSans
+    BBg.TextSize = 12
     BBg.ZIndex = 2
     BBg.Parent = F
 
@@ -437,8 +411,8 @@ local function CreateToggle(parent, text, key)
     Btn.Parent = F
     
     local function UpdateVis()
-        Tween(Bg, {BackgroundColor3 = Settings[key] and GetThemeColor() or Color3.fromRGB(45, 45, 50)}, 0.25)
-        Tween(C, {Position = Settings[key] and UDim2.new(1, -18, 0, 2) or UDim2.new(0, 2, 0, 2)}, 0.25, Enum.EasingStyle.Back)
+        Tween(Bg, {BackgroundColor3 = Settings[key] and GetThemeColor() or Color3.fromRGB(45, 45, 50)}, 0.2)
+        Tween(C, {Position = Settings[key] and UDim2.new(1, -16, 0, 2) or UDim2.new(0, 2, 0, 2)}, 0.2, Enum.EasingStyle.Back)
     end
 
     Btn.MouseButton1Click:Connect(function() 
@@ -458,7 +432,7 @@ local function CreateToggle(parent, text, key)
             local k = inp.KeyCode
             if k == Enum.KeyCode.Escape or k == Enum.KeyCode.Backspace then k = Enum.KeyCode.Unknown end
             Settings[bindKey] = k
-            BBg.Text = k == Enum.KeyCode.Unknown and "[None]" or "[" .. k.Name .. "]"
+            BBg.Text = k == Enum.KeyCode.Unknown and "[-]" or "[" .. k.Name .. "]"
             waitB = false
             SaveConfig()
         elseif not waitB and inp.KeyCode == Settings[bindKey] and Settings[bindKey] ~= Enum.KeyCode.Unknown then
@@ -482,33 +456,33 @@ end
 
 local function CreateSlider(parent, text, min, max, key)
     local F = Instance.new("Frame")
-    F.Size = UDim2.new(1, -5, 0, 52)
+    F.Size = UDim2.new(1, -5, 0, 48)
     F.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    F.BackgroundTransparency = 0.6
+    F.BackgroundTransparency = 0.5
     F.Parent = parent
 
     local FCorner = Instance.new("UICorner")
-    FCorner.CornerRadius = UDim.new(0, 8)
+    FCorner.CornerRadius = UDim.new(0, 6)
     FCorner.Parent = F
 
     local L = Instance.new("TextLabel")
-    L.Size = UDim2.new(0.5, 0, 0, 22)
-    L.Position = UDim2.new(0, 15, 0, 4)
+    L.Size = UDim2.new(0.5, 0, 0, 20)
+    L.Position = UDim2.new(0, 12, 0, 4)
     L.Text = text
     L.TextColor3 = Color3.fromRGB(230, 230, 230)
-    L.Font = Enum.Font.GothamMedium
-    L.TextSize = 13
+    L.Font = Enum.Font.SourceSansBold
+    L.TextSize = 14
     L.TextXAlignment = Enum.TextXAlignment.Left
     L.BackgroundTransparency = 1
     L.Parent = F
 
     local V = Instance.new("TextLabel")
-    V.Size = UDim2.new(0.3, 0, 0, 22)
-    V.Position = UDim2.new(1, -15, 0, 4)
+    V.Size = UDim2.new(0.3, 0, 0, 20)
+    V.Position = UDim2.new(1, -12, 0, 4)
     V.Text = tostring(Settings[key])
     V.TextColor3 = GetThemeColor()
-    V.Font = Enum.Font.GothamBold
-    V.TextSize = 13
+    V.Font = Enum.Font.SourceSansBold
+    V.TextSize = 14
     V.TextXAlignment = Enum.TextXAlignment.Right
     V.BackgroundTransparency = 1
     V.Parent = F
@@ -516,8 +490,8 @@ local function CreateSlider(parent, text, min, max, key)
     table.insert(ThemedTexts, V)
 
     local Bar = Instance.new("Frame")
-    Bar.Size = UDim2.new(1, -30, 0, 6)
-    Bar.Position = UDim2.new(0, 15, 0, 32)
+    Bar.Size = UDim2.new(1, -24, 0, 5)
+    Bar.Position = UDim2.new(0, 12, 0, 30)
     Bar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     Bar.Parent = F
 
@@ -554,7 +528,7 @@ local function CreateSlider(parent, text, min, max, key)
     RunService.RenderStepped:Connect(function()
         if drag then
             local p = math.clamp((UserInputService:GetMouseLocation().X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
-            Tween(Fill, {Size = UDim2.new(p, 0, 1, 0)}, 0.05, Enum.EasingStyle.Linear)
+            Fill.Size = UDim2.new(p, 0, 1, 0)
             local val = math.floor(min + (p * (max - min)))
             if Settings[key] ~= val then
                 Settings[key] = val
@@ -569,68 +543,118 @@ end
 
 local function CreateAction(parent, text, cb)
     local B = Instance.new("TextButton")
-    B.Size = UDim2.new(1, -5, 0, 40)
+    B.Size = UDim2.new(1, -5, 0, 36)
     B.BackgroundColor3 = GetThemeColor()
     B.BackgroundTransparency = 0.2
     B.Text = text
     B.TextColor3 = Color3.fromRGB(255, 255, 255)
-    B.Font = Enum.Font.GothamBold
-    B.TextSize = 13
+    B.Font = Enum.Font.SourceSansBold
+    B.TextSize = 14
     B.Parent = parent
     
     table.insert(ThemedBGs, B)
 
     local BCorner = Instance.new("UICorner")
-    BCorner.CornerRadius = UDim.new(0, 8)
+    BCorner.CornerRadius = UDim.new(0, 6)
     BCorner.Parent = B
 
+    B.MouseButton1Click:Connect(cb)
+end
+
+local function CreateKeybindSelector(parent, text, currentProp, cb)
+    local F = Instance.new("Frame")
+    F.Size = UDim2.new(1, -5, 0, 40)
+    F.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    F.BackgroundTransparency = 0.5
+    F.Parent = parent
+
+    local FCorner = Instance.new("UICorner")
+    FCorner.CornerRadius = UDim.new(0, 6)
+    FCorner.Parent = F
+
+    local L = Instance.new("TextLabel")
+    L.Size = UDim2.new(0.6, 0, 1, 0)
+    L.Position = UDim2.new(0, 12, 0, 0)
+    L.Text = text
+    L.TextColor3 = Color3.fromRGB(230, 230, 230)
+    L.Font = Enum.Font.SourceSansBold
+    L.TextSize = 15
+    L.TextXAlignment = Enum.TextXAlignment.Left
+    L.BackgroundTransparency = 1
+    L.Parent = F
+
+    local B = Instance.new("TextButton")
+    B.Size = UDim2.new(0, 80, 0, 24)
+    B.Position = UDim2.new(1, -90, 0, 8)
+    B.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    B.Text = "[" .. Settings[currentProp].Name .. "]"
+    B.TextColor3 = Color3.fromRGB(200, 200, 200)
+    B.Font = Enum.Font.SourceSansBold
+    B.TextSize = 13
+    B.Parent = F
+
+    local BCorner = Instance.new("UICorner")
+    BCorner.CornerRadius = UDim.new(0, 4)
+    BCorner.Parent = B
+
+    local waiting = false
     B.MouseButton1Click:Connect(function()
-        Tween(B, {Size = UDim2.new(1, -11, 0, 38)}, 0.1)
-        task.wait(0.1)
-        Tween(B, {Size = UDim2.new(1, -5, 0, 40)}, 0.1, Enum.EasingStyle.Back)
-        cb()
+        waiting = true
+        B.Text = "..."
+    end)
+
+    UserInputService.InputBegan:Connect(function(inp)
+        if waiting and inp.UserInputType == Enum.UserInputType.Keyboard then
+            local k = inp.KeyCode
+            if k == Enum.KeyCode.Escape then k = Enum.KeyCode.Unknown end
+            Settings[currentProp] = k
+            B.Text = "[" .. k.Name .. "]"
+            waiting = false
+            SaveConfig()
+            if cb then cb(k) end
+        end
     end)
 end
 
 local function CreateInput(parent, placeholder, btnText, cb)
     local F = Instance.new("Frame")
-    F.Size = UDim2.new(1, -5, 0, 44)
+    F.Size = UDim2.new(1, -5, 0, 40)
     F.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    F.BackgroundTransparency = 0.6
+    F.BackgroundTransparency = 0.5
     F.Parent = parent
 
     local FCorner = Instance.new("UICorner")
-    FCorner.CornerRadius = UDim.new(0, 8)
+    FCorner.CornerRadius = UDim.new(0, 6)
     FCorner.Parent = F
 
     local Box = Instance.new("TextBox")
-    Box.Size = UDim2.new(1, -100, 1, 0)
-    Box.Position = UDim2.new(0, 15, 0, 0)
+    Box.Size = UDim2.new(1, -95, 1, 0)
+    Box.Position = UDim2.new(0, 12, 0, 0)
     Box.BackgroundTransparency = 1
     Box.PlaceholderText = placeholder
     Box.Text = ""
     Box.TextColor3 = Color3.fromRGB(240, 240, 240)
     Box.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-    Box.Font = Enum.Font.Gotham
-    Box.TextSize = 13
+    Box.Font = Enum.Font.SourceSans
+    Box.TextSize = 14
     Box.TextXAlignment = Enum.TextXAlignment.Left
     Box.ClearTextOnFocus = false
     Box.Parent = F
 
     local B = Instance.new("TextButton")
-    B.Size = UDim2.new(0, 75, 0, 28)
-    B.Position = UDim2.new(1, -85, 0, 8)
+    B.Size = UDim2.new(0, 70, 0, 26)
+    B.Position = UDim2.new(1, -80, 0, 7)
     B.BackgroundColor3 = GetThemeColor()
     B.Text = btnText
     B.TextColor3 = Color3.fromRGB(255, 255, 255)
-    B.Font = Enum.Font.GothamBold
-    B.TextSize = 12
+    B.Font = Enum.Font.SourceSansBold
+    B.TextSize = 13
     B.Parent = F
     
     table.insert(ThemedBGs, B)
 
     local BCorner = Instance.new("UICorner")
-    BCorner.CornerRadius = UDim.new(0, 6)
+    BCorner.CornerRadius = UDim.new(0, 4)
     BCorner.Parent = B
 
     B.MouseButton1Click:Connect(function()
@@ -652,33 +676,33 @@ local Wld = CreatePage("World")
 local Oth = CreatePage("Other")
 SwitchTab("Combat")
 
-CreateToggle(Cmb, "Silent Aim (Невидимая наводка)", "SilentAim")
-CreateToggle(Cmb, "Aimlock (Наводка камеры)", "Aimlock")
-CreateToggle(Cmb, "Только видимые цели (Wallcheck)", "AimVisibleOnly")
-CreateToggle(Cmb, "Triggerbot (Авто-выстрел)", "Triggerbot")
-CreateToggle(Cmb, "Autoscope (Зажатие ПКМ при захвате)", "AutoScope")
-CreateToggle(Cmb, "Slow Walk (Замедление по бинду)", "SlowWalk")
-CreateSlider(Cmb, "Скорость Slow Walk", 3, 14, "SlowWalkSpeed")
-CreateToggle(Cmb, "Показывать FOV", "DrawFOV")
-CreateSlider(Cmb, "Радиус FOV", 20, 600, "FOV")
+CreateToggle(Cmb, "Silent Aim", "SilentAim")
+CreateToggle(Cmb, "Aimlock", "Aimlock")
+CreateToggle(Cmb, "Visible Only", "VisibleOnly")
+CreateToggle(Cmb, "Triggerbot", "Triggerbot")
+CreateToggle(Cmb, "Autoscope", "Autoscope")
+CreateToggle(Cmb, "Slow Walk", "SlowWalk")
+CreateSlider(Cmb, "Slow Speed", 3, 14, "SlowWalkSpeed")
+CreateToggle(Cmb, "Draw FOV", "DrawFOV")
+CreateSlider(Cmb, "FOV Radius", 20, 600, "FOV")
 
-CreateToggle(Esp, "ESP All Players", "AllPlayersESP")
-CreateToggle(Esp, "Отображать никнеймы", "NamesESP")
-CreateSlider(Esp, "Цвет врагов [R]", 0, 255, "EnemyColorR")
-CreateSlider(Esp, "Цвет врагов [G]", 0, 255, "EnemyColorG")
-CreateSlider(Esp, "Цвет врагов [B]", 0, 255, "EnemyColorB")
+CreateToggle(Esp, "Player ESP", "PlayerESP")
+CreateToggle(Esp, "Player Names", "NameESP")
+CreateSlider(Esp, "Enemy [R]", 0, 255, "EnemyColorR")
+CreateSlider(Esp, "Enemy [G]", 0, 255, "EnemyColorG")
+CreateSlider(Esp, "Enemy [B]", 0, 255, "EnemyColorB")
 
-CreateSlider(Esp, "Цвет приоритета [R]", 0, 255, "PriorityColorR")
-CreateSlider(Esp, "Цвет приоритета [G]", 0, 255, "PriorityColorG")
-CreateSlider(Esp, "Цвет приоритета [B]", 0, 255, "PriorityColorB")
+CreateSlider(Esp, "Priority [R]", 0, 255, "PriorityColorR")
+CreateSlider(Esp, "Priority [G]", 0, 255, "PriorityColorG")
+CreateSlider(Esp, "Priority [B]", 0, 255, "PriorityColorB")
 
 local PlrListLabel = Instance.new("TextLabel")
-PlrListLabel.Size = UDim2.new(1, -5, 0, 25)
+PlrListLabel.Size = UDim2.new(1, -5, 0, 22)
 PlrListLabel.BackgroundTransparency = 1
-PlrListLabel.Text = "Список особых игроков: (пусто)"
-PlrListLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
-PlrListLabel.Font = Enum.Font.Gotham
-PlrListLabel.TextSize = 12
+PlrListLabel.Text = "Priority List: (empty)"
+PlrListLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+PlrListLabel.Font = Enum.Font.SourceSans
+PlrListLabel.TextSize = 13
 PlrListLabel.TextXAlignment = Enum.TextXAlignment.Left
 PlrListLabel.Parent = Esp
 
@@ -686,75 +710,119 @@ local function RefreshPriorityLabel()
     local names = {}
     for n, _ in pairs(Settings.PriorityPlayers) do table.insert(names, n) end
     if #names == 0 then
-        PlrListLabel.Text = "Список особых игроков: (пусто)"
+        PlrListLabel.Text = "Priority List: (empty)"
     else
-        PlrListLabel.Text = "Особые: " .. table.concat(names, ", ")
+        PlrListLabel.Text = "Priority: " .. table.concat(names, ", ")
     end
 end
 
-CreateInput(Esp, "Введите ник игрока...", "Добавить", function(name)
+CreateInput(Esp, "Enter username...", "Add", function(name)
     Settings.PriorityPlayers[name] = true
     RefreshPriorityLabel()
     SaveConfig()
 end)
 
-CreateAction(Esp, "Очистить список особых игроков", function()
+CreateAction(Esp, "Clear Priority List", function()
     Settings.PriorityPlayers = {}
     RefreshPriorityLabel()
     SaveConfig()
 end)
 
 CreateToggle(Wld, "Nightmode", "Nightmode")
-CreateToggle(Wld, "FullBright", "FullBright")
-CreateToggle(Wld, "Убрать тени", "NoShadows")
-CreateToggle(Wld, "RTX Graphics", "RTX")
-CreateSlider(Wld, "Освещение Мира [R]", 0, 255, "WorldR")
-CreateSlider(Wld, "Освещение Мира [G]", 0, 255, "WorldG")
-CreateSlider(Wld, "Освещение Мира [B]", 0, 255, "WorldB")
+CreateToggle(Wld, "Fullbright", "Fullbright")
+CreateToggle(Wld, "No Shadows", "NoShadows")
+CreateToggle(Wld, "RTX Visuals", "RTX")
+CreateSlider(Wld, "World Ambient [R]", 0, 255, "WorldR")
+CreateSlider(Wld, "World Ambient [G]", 0, 255, "WorldG")
+CreateSlider(Wld, "World Ambient [B]", 0, 255, "WorldB")
 
-CreateSlider(Wld, "Цвет Меню [R]", 0, 255, "UIColorR")
-CreateSlider(Wld, "Цвет Меню [G]", 0, 255, "UIColorG")
-CreateSlider(Wld, "Цвет Меню [B]", 0, 255, "UIColorB")
+CreateSlider(Wld, "Theme Color [R]", 0, 255, "UIColorR")
+CreateSlider(Wld, "Theme Color [G]", 0, 255, "UIColorG")
+CreateSlider(Wld, "Theme Color [B]", 0, 255, "UIColorB")
 
-local Info = Instance.new("TextLabel")
-Info.Size = UDim2.new(1, -5, 0, 45)
-Info.BackgroundTransparency = 1
-Info.Text = "one.hvh [One Tap]\nАвтор: relosterpc\nВерсия: 1.01"
-Info.TextColor3 = Color3.fromRGB(120, 120, 120)
-Info.Font = Enum.Font.Gotham
-Info.TextSize = 12
-Info.Parent = Oth
-
-CreateAction(Oth, "Сохранить конфигурацию", function()
+CreateKeybindSelector(Oth, "Menu Toggle Key", "MenuBind")
+CreateAction(Oth, "Save Config", function()
     SaveConfig()
 end)
 
+local Info = Instance.new("TextLabel")
+Info.Size = UDim2.new(1, -5, 0, 30)
+Info.BackgroundTransparency = 1
+Info.Text = "one.hvh | One Tap Edition"
+Info.TextColor3 = Color3.fromRGB(120, 120, 120)
+Info.Font = Enum.Font.SourceSans
+Info.TextSize = 13
+Info.Parent = Oth
+
 local RTX_CC = Instance.new("ColorCorrectionEffect", Lighting)
-RTX_CC.Brightness = 0.05
+RTX_CC.Brightness = 0.04
 RTX_CC.Contrast = 0.2
-RTX_CC.Saturation = 0.4
+RTX_CC.Saturation = 0.35
 RTX_CC.Enabled = false
 
 local RTX_Bloom = Instance.new("BloomEffect", Lighting)
-RTX_Bloom.Intensity = 0.8
-RTX_Bloom.Size = 22
+RTX_Bloom.Intensity = 0.7
+RTX_Bloom.Size = 20
 RTX_Bloom.Threshold = 1.1
 RTX_Bloom.Enabled = false
 
 local RTX_Sun = Instance.new("SunRaysEffect", Lighting)
-RTX_Sun.Intensity = 0.15
+RTX_Sun.Intensity = 0.12
 RTX_Sun.Spread = 0.8
 RTX_Sun.Enabled = false
 
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
-local function IsTargetVisible(headPart)
+local function GetTargetPart(model)
+    if not model or not model:IsA("Model") then return nil end
+    local hitbox = model:FindFirstChild("Hitbox")
+    if hitbox then
+        local headHB = hitbox:FindFirstChild("Hitbox_Head")
+        if headHB and headHB:IsA("BasePart") then return headHB end
+        local torsoHB = hitbox:FindFirstChild("Hitbox_Torso")
+        if torsoHB and torsoHB:IsA("BasePart") then return torsoHB end
+    end
+    local head = model:FindFirstChild("Head")
+    if head and head:IsA("BasePart") then return head end
+    local hrp = model:FindFirstChild("HumanoidRootPart")
+    if hrp and hrp:IsA("BasePart") then return hrp end
+    return nil
+end
+
+local function IsAlive(model)
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    if hum then
+        return hum.Health > 0
+    end
+    return true
+end
+
+local ignoredNames = {
+    Camera = true, Terrain = true, Map = true, Lobby = true,
+    Weapons = true, Effects = true, SpawnLocation = true,
+    Baseplate = true, Guide = true
+}
+
+local function GetAllTargets()
+    local targets = {}
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") and obj ~= LocalPlayer.Character and not ignoredNames[obj.Name] then
+            local part = GetTargetPart(obj)
+            if part and IsAlive(obj) then
+                table.insert(targets, {Model = obj, Part = part, Name = obj.Name})
+            end
+        end
+    end
+    return targets
+end
+
+local function IsVisible(part, model)
     local char = LocalPlayer.Character
-    if not char or not headPart then return false end
+    if not char or not part then return false end
     rayParams.FilterDescendantsInstances = {char, Camera}
-    local result = Workspace:Raycast(Camera.CFrame.Position, (headPart.Position - Camera.CFrame.Position), rayParams)
-    return not result or result.Instance:IsDescendantOf(headPart.Parent)
+    local result = Workspace:Raycast(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position), rayParams)
+    return not result or result.Instance:IsDescendantOf(model)
 end
 
 local function GetClosestTarget()
@@ -762,26 +830,17 @@ local function GetClosestTarget()
     local tgt = nil
     local minD = math.huge
 
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            local char = p.Character
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            local head = char:FindFirstChild("Head")
-            local hrp = char:FindFirstChild("HumanoidRootPart")
+    for _, entity in ipairs(GetAllTargets()) do
+        if Settings.VisibleOnly and not IsVisible(entity.Part, entity.Model) then
+            continue
+        end
 
-            if hum and hum.Health > 0 and head and hrp then
-                if Settings.AimVisibleOnly and not IsTargetVisible(head) then 
-                    continue 
-                end
-
-                local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                if onScreen then
-                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mPos).Magnitude
-                    if dist <= Settings.FOV and dist < minD then
-                        minD = dist
-                        tgt = p
-                    end
-                end
+        local screenPos, onScreen = Camera:WorldToViewportPoint(entity.Part.Position)
+        if onScreen then
+            local dist = (Vector2.new(screenPos.X, screenPos.Y) - mPos).Magnitude
+            if dist <= Settings.FOV and dist < minD then
+                minD = dist
+                tgt = entity
             end
         end
     end
@@ -796,25 +855,25 @@ local function HandleTriggerbot()
     rayParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
     local result = Workspace:Raycast(ray.Origin, ray.Direction * 1000, rayParams)
 
-    if result and result.Instance and result.Instance.Parent then
-        local targetPlr = Players:GetPlayerFromCharacter(result.Instance.Parent)
-        if targetPlr and targetPlr ~= LocalPlayer then
-            local hum = targetPlr.Character and targetPlr.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
+    if result and result.Instance then
+        local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
+        if hitModel and hitModel ~= LocalPlayer.Character and not ignoredNames[hitModel.Name] then
+            local part = GetTargetPart(hitModel)
+            if part and IsAlive(hitModel) then
                 triggerDebounce = true
                 if mouse1click then 
                     mouse1click() 
                 else 
                     game:GetService("VirtualUser"):ClickButton1(Vector2.new(0, 0))
                 end
-                task.delay(0.12, function() triggerDebounce = false end)
+                task.delay(0.1, function() triggerDebounce = false end)
             end
         end
     end
 end
 
-local function HandleAutoScope()
-    if not Settings.AutoScope then
+local function HandleAutoscope()
+    if not Settings.Autoscope then
         if isScoping then
             if mouse2release then mouse2release() end
             isScoping = false
@@ -822,7 +881,7 @@ local function HandleAutoScope()
         return
     end
 
-    if CurrentTarget and CurrentTarget.Character then
+    if CurrentTarget and CurrentTarget.Part then
         if not isScoping then
             if mouse2press then mouse2press() end
             isScoping = true
@@ -836,56 +895,68 @@ local function HandleAutoScope()
 end
 
 local function UpdateESP()
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer and p.Character then
-            local char = p.Character
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            local isAlive = hum and hum.Health > 0
+    local currentEntities = GetAllTargets()
+    local aliveSet = {}
 
-            local isPriority = Settings.PriorityPlayers[p.Name] ~= nil
-            local color = isPriority and GetPriorityColor() or GetEnemyColor()
-            local shouldShow = Settings.AllPlayersESP and isAlive
+    for _, entity in ipairs(currentEntities) do
+        aliveSet[entity.Model] = true
+        local isPriority = Settings.PriorityPlayers[entity.Name] ~= nil
+        local color = isPriority and GetPriorityColor() or GetEnemyColor()
+        local shouldShow = Settings.PlayerESP
 
-            local hl = char:FindFirstChild("onehvh_HL")
-            if shouldShow then
-                if not hl then
-                    hl = Instance.new("Highlight")
-                    hl.Name = "onehvh_HL"
-                    hl.FillTransparency = 0.5
-                    hl.OutlineTransparency = 0.1
-                    hl.Parent = char
-                end
-                hl.FillColor = color
-                hl.OutlineColor = color
-            elseif hl then
-                hl:Destroy()
+        local hl = entity.Model:FindFirstChild("onehvh_HL")
+        if shouldShow then
+            if not hl then
+                hl = Instance.new("Highlight")
+                hl.Name = "onehvh_HL"
+                hl.FillTransparency = 0.5
+                hl.OutlineTransparency = 0.1
+                hl.Adornee = entity.Model
+                hl.Parent = entity.Model
             end
+            hl.FillColor = color
+            hl.OutlineColor = color
+        elseif hl then
+            hl:Destroy()
+        end
 
-            local head = char:FindFirstChild("Head")
+        local head = entity.Model:FindFirstChild("Head") or entity.Part
+        if head then
+            local bg = head:FindFirstChild("onehvh_Name")
+            if shouldShow and Settings.NameESP then
+                if not bg then
+                    bg = Instance.new("BillboardGui")
+                    bg.Name = "onehvh_Name"
+                    bg.Size = UDim2.new(0, 140, 0, 24)
+                    bg.StudsOffset = Vector3.new(0, 2.2, 0)
+                    bg.AlwaysOnTop = true
+                    bg.Adornee = head
+                    bg.Parent = head
+
+                    local txt = Instance.new("TextLabel")
+                    txt.Size = UDim2.new(1, 0, 1, 0)
+                    txt.BackgroundTransparency = 1
+                    txt.TextStrokeTransparency = 0.2
+                    txt.Font = Enum.Font.SourceSansBold
+                    txt.TextSize = 13
+                    txt.Parent = bg
+                end
+                bg.TextLabel.Text = entity.Name .. (isPriority and " [PRIORITY]" or "")
+                bg.TextLabel.TextColor3 = color
+            elseif bg then
+                bg:Destroy()
+            end
+        end
+    end
+
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") and not aliveSet[obj] then
+            local hl = obj:FindFirstChild("onehvh_HL")
+            if hl then hl:Destroy() end
+            local head = obj:FindFirstChild("Head")
             if head then
                 local bg = head:FindFirstChild("onehvh_Name")
-                if shouldShow and Settings.NamesESP then
-                    if not bg then
-                        bg = Instance.new("BillboardGui")
-                        bg.Name = "onehvh_Name"
-                        bg.Size = UDim2.new(0, 140, 0, 30)
-                        bg.StudsOffset = Vector3.new(0, 2.2, 0)
-                        bg.AlwaysOnTop = true
-                        bg.Parent = head
-
-                        local txt = Instance.new("TextLabel")
-                        txt.Size = UDim2.new(1, 0, 1, 0)
-                        txt.BackgroundTransparency = 1
-                        txt.TextStrokeTransparency = 0.2
-                        txt.Font = Enum.Font.GothamBold
-                        txt.TextSize = 12
-                        txt.Parent = bg
-                    end
-                    bg.TextLabel.Text = p.Name .. (isPriority and " [PRIORITY]" or "")
-                    bg.TextLabel.TextColor3 = color
-                elseif bg then
-                    bg:Destroy()
-                end
+                if bg then bg:Destroy() end
             end
         end
     end
@@ -895,14 +966,7 @@ UserInputService.InputBegan:Connect(function(i, gp)
     if gp then return end
     if i.KeyCode == Settings.MenuBind and Settings.MenuBind ~= Enum.KeyCode.Unknown then
         Settings.Visible = not Settings.Visible
-        Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -320, 0.5, -240) or UDim2.new(0.5, -320, 2, 0)}, 0.4, Enum.EasingStyle.Cubic)
-    end
-end)
-
-UserInputService.JumpRequest:Connect(function()
-    if Settings.InfJump and LocalPlayer.Character then
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        Tween(Main, {Position = Settings.Visible and UDim2.new(0.5, -310, 0.5, -225) or UDim2.new(0.5, -310, 2, 0)}, 0.35, Enum.EasingStyle.Cubic)
     end
 end)
 
@@ -912,7 +976,7 @@ RunService.RenderStepped:Connect(function()
 
     local thm = GetThemeColor()
     WMText.Text = "<font color='#" .. thm:ToHex() .. "'>one.hvh</font> One Tap | " .. LocalPlayer.Name .. " | " .. os.date("%H:%M:%S")
-    Watermark.Size = UDim2.new(0, WMText.TextBounds.X + 16, 0, 26)
+    Watermark.Size = UDim2.new(0, WMText.TextBounds.X + 16, 0, 24)
 
     if Settings.DrawFOV then
         local mPos = UserInputService:GetMouseLocation()
@@ -927,7 +991,7 @@ RunService.RenderStepped:Connect(function()
         Lighting.TimeOfDay = "00:00:00"
         Lighting.Ambient = Color3.fromRGB(10, 10, 15)
         Lighting.OutdoorAmbient = Color3.fromRGB(10, 10, 15)
-    elseif Settings.FullBright then
+    elseif Settings.Fullbright then
         Lighting.TimeOfDay = "12:00:00"
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
@@ -945,12 +1009,12 @@ RunService.RenderStepped:Connect(function()
 
     CurrentTarget = GetClosestTarget()
 
-    if Settings.Aimlock and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
-        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, CurrentTarget.Character.Head.Position)
+    if Settings.Aimlock and CurrentTarget and CurrentTarget.Part then
+        Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, CurrentTarget.Part.Position)
     end
 
     HandleTriggerbot()
-    HandleAutoScope()
+    HandleAutoscope()
 
     local char = LocalPlayer.Character
     if char then
@@ -958,8 +1022,6 @@ RunService.RenderStepped:Connect(function()
         if hum then
             if isSlowWalkActive then
                 hum.WalkSpeed = Settings.SlowWalkSpeed
-            elseif Settings.SpeedHack then
-                hum.WalkSpeed = Settings.WalkSpeed
             else
                 hum.WalkSpeed = 16
             end
@@ -968,31 +1030,42 @@ RunService.RenderStepped:Connect(function()
 end)
 
 local oldIdx
-oldIdx = hookmetamethod(game, "__index", function(self, key)
+oldIdx = hookmetamethod(game, "__index", newcclosure(function(self, key)
     if not checkcaller() and Settings.SilentAim and typeof(self) == "Instance" and self:IsA("PlayerMouse") then
-        if CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
-            if key == "Hit" then return CurrentTarget.Character.Head.CFrame end
-            if key == "Target" then return CurrentTarget.Character.Head end
+        if CurrentTarget and CurrentTarget.Part then
+            if key == "Hit" then return CurrentTarget.Part.CFrame end
+            if key == "Target" then return CurrentTarget.Part end
         end
     end
     return oldIdx(self, key)
-end)
+end))
+
+local oldRaycast
+oldRaycast = hookfunction(workspace.Raycast, newcclosure(function(self, origin, direction, params)
+    if not checkcaller() and Settings.SilentAim and CurrentTarget and CurrentTarget.Part then
+        local targetPos = CurrentTarget.Part.Position
+        local mag = direction.Magnitude
+        if mag > 0 then
+            direction = (targetPos - origin).Unit * mag
+        end
+    end
+    return oldRaycast(self, origin, direction, params)
+end))
 
 local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-    local args = {...}
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
     local method = getnamecallmethod()
-    
-    if not checkcaller() and Settings.SilentAim and CurrentTarget and CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("Head") then
-        if method == "FireServer" or method == "InvokeServer" then
-            local targetHeadPos = CurrentTarget.Character.Head.Position
-            for i, v in ipairs(args) do
-                if typeof(v) == "Vector3" then
-                    args[i] = targetHeadPos
-                end
+    local args = {...}
+    if not checkcaller() and Settings.SilentAim and CurrentTarget and CurrentTarget.Part then
+        if (method == "Raycast" or method == "raycast") and self == Workspace then
+            local origin = args[1]
+            local direction = args[2]
+            if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" then
+                local mag = direction.Magnitude
+                args[2] = (CurrentTarget.Part.Position - origin).Unit * mag
+                return oldNamecall(self, unpack(args))
             end
-            return oldNamecall(self, unpack(args))
         end
     end
     return oldNamecall(self, ...)
-end)
+end))
