@@ -22,6 +22,8 @@ local Settings = {
     Aimlock = false, AimlockBind = Enum.KeyCode.Unknown,
     VisibleOnly = true, VisibleOnlyBind = Enum.KeyCode.Unknown,
     Triggerbot = false, TriggerbotBind = Enum.KeyCode.Unknown,
+    Spinbot = false, SpinbotBind = Enum.KeyCode.Unknown, SpinSpeed = 35,
+    AntiAim = false, AntiAimBind = Enum.KeyCode.Unknown,
     Autoscope = false, AutoscopeBind = Enum.KeyCode.Unknown,
     DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown,
     FOV = 120,
@@ -683,6 +685,9 @@ CreateToggle(Cmb, "Triggerbot", "Triggerbot")
 CreateToggle(Cmb, "Autoscope", "Autoscope")
 CreateToggle(Cmb, "Slow Walk", "SlowWalk")
 CreateSlider(Cmb, "Slow Speed", 3, 14, "SlowWalkSpeed")
+CreateToggle(Cmb, "Spinbot", "Spinbot")
+CreateSlider(Cmb, "Spin Speed", 5, 100, "SpinSpeed")
+CreateToggle(Cmb, "Anti-Aim", "AntiAim")
 CreateToggle(Cmb, "Draw FOV", "DrawFOV")
 CreateSlider(Cmb, "FOV Radius", 20, 600, "FOV")
 
@@ -852,25 +857,41 @@ local function HandleTriggerbot()
     
     local center = Camera.ViewportSize / 2
     local ray = Camera:ViewportPointToRay(center.X, center.Y)
-    rayParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+    
+    local filterList = {LocalPlayer.Character, Camera}
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        if obj:IsA("Model") and obj ~= LocalPlayer.Character and not ignoredNames[obj.Name] then
+            for _, child in ipairs(obj:GetChildren()) do
+                if child:IsA("Accessory") then
+                    table.insert(filterList, child)
+                end
+            end
+        end
+    end
+    
+    rayParams.FilterDescendantsInstances = filterList
     local result = Workspace:Raycast(ray.Origin, ray.Direction * 1000, rayParams)
 
     if result and result.Instance then
-        local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
+        local hitInstance = result.Instance
+        local hitModel = hitInstance:FindFirstAncestorOfClass("Model")
+        
         if hitModel and hitModel ~= LocalPlayer.Character and not ignoredNames[hitModel.Name] then
-            local part = GetTargetPart(hitModel)
-            if part and IsAlive(hitModel) then
+            local isHitboxPart = hitInstance.Name:find("Hitbox") ~= nil or hitInstance.Name == "Head" or hitInstance.Name == "Torso"
+            if isHitboxPart and IsAlive(hitModel) then
                 triggerDebounce = true
                 if mouse1click then 
                     mouse1click() 
                 else 
                     game:GetService("VirtualUser"):ClickButton1(Vector2.new(0, 0))
                 end
-                task.delay(0.1, function() triggerDebounce = false end)
+                task.delay(0.18, function() triggerDebounce = false end)
             end
         end
     end
 end
+
+local lastScopeTargetTime = 0
 
 local function HandleAutoscope()
     if not Settings.Autoscope then
@@ -882,12 +903,13 @@ local function HandleAutoscope()
     end
 
     if CurrentTarget and CurrentTarget.Part then
+        lastScopeTargetTime = os.clock()
         if not isScoping then
             if mouse2press then mouse2press() end
             isScoping = true
         end
     else
-        if isScoping then
+        if isScoping and (os.clock() - lastScopeTargetTime > 0.35) then
             if mouse2release then mouse2release() end
             isScoping = false
         end
@@ -904,13 +926,19 @@ local function UpdateESP()
         local color = isPriority and GetPriorityColor() or GetEnemyColor()
         local shouldShow = Settings.PlayerESP
 
+        local existingDH = entity.Model:FindFirstChild("DeployHighlight")
+        if existingDH then 
+            existingDH:Destroy() 
+        end
+
         local hl = entity.Model:FindFirstChild("onehvh_HL")
         if shouldShow then
             if not hl then
                 hl = Instance.new("Highlight")
                 hl.Name = "onehvh_HL"
-                hl.FillTransparency = 0.5
-                hl.OutlineTransparency = 0.1
+                hl.FillTransparency = 0.4
+                hl.OutlineTransparency = 0
+                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                 hl.Adornee = entity.Model
                 hl.Parent = entity.Model
             end
@@ -1015,6 +1043,22 @@ RunService.RenderStepped:Connect(function()
 
     HandleTriggerbot()
     HandleAutoscope()
+
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local hrp = char.HumanoidRootPart
+        if Settings.Spinbot then
+            hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(Settings.SpinSpeed), 0)
+        end
+        
+        if Settings.AntiAim then
+            local pitchAngle = math.rad(-75)
+            local jitterYaw = math.rad(math.random(-180, 180))
+            local rootJoint = char:FindFirstChild("LowerTorso") and char.LowerTorso:FindFirstChild("Root") or hrp:FindFirstChild("RootJoint")
+            if rootJoint then
+                rootJoint.C0 = CFrame.new(rootJoint.C0.Position) * CFrame.Angles(pitchAngle, jitterYaw, 0)
+            end
+        end
+    end
 
     local char = LocalPlayer.Character
     if char then
