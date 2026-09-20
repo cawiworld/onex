@@ -24,6 +24,7 @@ local Settings = {
     Triggerbot = false, TriggerbotBind = Enum.KeyCode.Unknown,
     Spinbot = false, SpinbotBind = Enum.KeyCode.Unknown, SpinSpeed = 35,
     AntiAim = false, AntiAimBind = Enum.KeyCode.Unknown,
+    ThirdPerson = false, ThirdPersonBind = Enum.KeyCode.V, ThirdPersonDist = 10,
     Autoscope = false, AutoscopeBind = Enum.KeyCode.Unknown,
     DrawFOV = false, DrawFOVBind = Enum.KeyCode.Unknown,
     FOV = 120,
@@ -688,6 +689,8 @@ CreateSlider(Cmb, "Slow Speed", 3, 14, "SlowWalkSpeed")
 CreateToggle(Cmb, "Spinbot", "Spinbot")
 CreateSlider(Cmb, "Spin Speed", 5, 100, "SpinSpeed")
 CreateToggle(Cmb, "Anti-Aim", "AntiAim")
+CreateToggle(Cmb, "Third Person", "ThirdPerson")
+CreateSlider(Cmb, "TP Distance", 3, 25, "ThirdPersonDist")
 CreateToggle(Cmb, "Draw FOV", "DrawFOV")
 CreateSlider(Cmb, "FOV Radius", 20, 600, "FOV")
 
@@ -1095,6 +1098,34 @@ oldRaycast = hookfunction(workspace.Raycast, newcclosure(function(self, origin, 
     end
     return oldRaycast(self, origin, direction, params)
 end))
+
+RunService:BindToRenderStep("onehvh_ThirdPerson", Enum.RenderPriority.Camera.Value + 10, function()
+    if Settings.ThirdPerson and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local char = LocalPlayer.Character
+        local hrp = char.HumanoidRootPart
+        
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.LocalTransparencyModifier = 0
+            end
+        end
+
+        local rootPos = hrp.Position + Vector3.new(0, 2, 0)
+        local camRot = Camera.CFrame.Rotation
+        local targetOffset = (camRot * CFrame.new(2, 0, Settings.ThirdPersonDist)).Position
+        
+        local tpRayParams = RaycastParams.new()
+        tpRayParams.FilterType = Enum.RaycastFilterType.Exclude
+        tpRayParams.FilterDescendantsInstances = {char, Camera}
+        
+        local result = Workspace:Raycast(rootPos, targetOffset, tpRayParams)
+        if result then
+            Camera.CFrame = CFrame.new(result.Position - (targetOffset.Unit * 0.5), rootPos)
+        else
+            Camera.CFrame = CFrame.new(rootPos + targetOffset, rootPos + (camRot.LookVector * 100))
+        end
+    end
+end)
 
 local oldNamecall
 oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
