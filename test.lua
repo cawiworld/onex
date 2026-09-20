@@ -1,13 +1,15 @@
-local weaponClientModule = game:GetService("StarterPlayer").StarterPlayerScripts.Start.Game.WeaponClient
+local clientScript = game:GetService("Players").LocalPlayer.PlayerScripts:FindFirstChild("WeaponClient", true)
+    or game:GetService("StarterPlayer").StarterPlayerScripts.Start.Game.WeaponClient
 
-print("--- [WEAPON CLIENT DUMP] ---")
-for _, obj in ipairs(getgc(true)) do
-    if type(obj) == "table" and (rawget(obj, "Fire") or rawget(obj, "Shoot") or rawget(obj, "Reload")) then
-        print("Найдена таблица контроллера стрельбы!")
-        for k, v in pairs(obj) do
-            print("  [Field]", tostring(k), "=", typeof(v))
+print("--- [GETSENV WEAPONCLIENT] ---")
+local env = getsenv(clientScript)
+
+for k, v in pairs(env) do
+    print("[ENV]", tostring(k), "=", typeof(v))
+    if type(v) == "table" then
+        for subK, subV in pairs(v) do
+            print("    ->", tostring(subK), "=", typeof(subV), tostring(subV))
         end
-        break
     end
 end
-print("--- [END DUMP] ---")
+print("--- [END GETSENV] ---")
