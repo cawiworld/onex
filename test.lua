@@ -1,34 +1,13 @@
--- test file for rapidfire on onetap
-print("--- [SEARCHING IN MEMORY] ---")
-local found = false
+local weaponClientModule = game:GetService("StarterPlayer").StarterPlayerScripts.Start.Game.WeaponClient
 
+print("--- [WEAPON CLIENT DUMP] ---")
 for _, obj in ipairs(getgc(true)) do
-    if type(obj) == "table" and rawget(obj, "Moon Rifle") then
-        found = true
-        print("Найдена таблица оружия в памяти!")
-        local weapon = obj["Moon Rifle"]
-        if type(weapon) == "table" then
-            for statName, statVal in pairs(weapon) do
-                print("  [STAT]", statName, "=", statVal)
-            end
-        else
-            for k, v in pairs(obj) do
-                print(k, "=", v)
-            end
+    if type(obj) == "table" and (rawget(obj, "Fire") or rawget(obj, "Shoot") or rawget(obj, "Reload")) then
+        print("Найдена таблица контроллера стрельбы!")
+        for k, v in pairs(obj) do
+            print("  [Field]", tostring(k), "=", typeof(v))
         end
         break
     end
 end
-
-if not found then
-    print("Поиск по названию не дал результатов. Пробуем перебор всех таблиц с параметрами задержки:")
-    for _, obj in ipairs(getgc(true)) do
-        if type(obj) == "table" and (rawget(obj, "FireRate") or rawget(obj, "Cooldown") or rawget(obj, "RPM")) then
-            for k, v in pairs(obj) do
-                print("  ", k, "=", v)
-            end
-            break
-        end
-    end
-end
-print("--- [SEARCH FINISHED] ---")
+print("--- [END DUMP] ---")
