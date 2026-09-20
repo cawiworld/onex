@@ -1,24 +1,34 @@
 -- test file for rapidfire on onetap
-local weaponsModule = game:GetService("ReplicatedStorage").Common.Managers.WeaponManager._Weapons
-local data = require(weaponsModule)
+print("--- [SEARCHING IN MEMORY] ---")
+local found = false
 
-print("-- Weapons data")
-local function printTable(tbl, indent)
-    indent = indent or ""
-    for k, v in pairs(tbl) do
-        if type(v) == "table" then
-            print(indent .. tostring(k) .. " = {")
-            printTable(v, indent .. "  ")
-            print(indent .. "}")
+for _, obj in ipairs(getgc(true)) do
+    if type(obj) == "table" and rawget(obj, "Moon Rifle") then
+        found = true
+        print("Найдена таблица оружия в памяти!")
+        local weapon = obj["Moon Rifle"]
+        if type(weapon) == "table" then
+            for statName, statVal in pairs(weapon) do
+                print("  [STAT]", statName, "=", statVal)
+            end
         else
-            print(indent .. tostring(k) .. " = " .. tostring(v))
+            for k, v in pairs(obj) do
+                print(k, "=", v)
+            end
         end
+        break
     end
 end
 
-if type(data) == "table" then
-    printTable(data)
-else
-    print("Module returned:", typeof(data), data)
+if not found then
+    print("Поиск по названию не дал результатов. Пробуем перебор всех таблиц с параметрами задержки:")
+    for _, obj in ipairs(getgc(true)) do
+        if type(obj) == "table" and (rawget(obj, "FireRate") or rawget(obj, "Cooldown") or rawget(obj, "RPM")) then
+            for k, v in pairs(obj) do
+                print("  ", k, "=", v)
+            end
+            break
+        end
+    end
 end
-print("-- End Weapons data")
+print("--- [SEARCH FINISHED] ---")
