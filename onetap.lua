@@ -40,7 +40,12 @@ local Settings = {
     Nightmode = false, NightmodeBind = Enum.KeyCode.Unknown,
     Fullbright = false, FullbrightBind = Enum.KeyCode.Unknown,
     NoShadows = false, NoShadowsBind = Enum.KeyCode.Unknown,
-    RTX = false, RTXBind = Enum.KeyCode.Unknown,
+    RTX = true, RTXBind = Enum.KeyCode.Unknown,
+    DOF = false, DOFBind = Enum.KeyCode.Unknown,
+    SkyPreset = "Synthwave",
+    Exposure = 0.1,
+    Saturation = 0.4,
+    Contrast = 0.25,
     WorldR = 255, WorldG = 255, WorldB = 255,
 
     UIColorR = 66, UIColorG = 135, UIColorB = 245
@@ -48,6 +53,7 @@ local Settings = {
 
 local CurrentTarget = nil
 local isSlowWalkActive = false
+local spinAngle = 0
 local isScoping = false
 local triggerDebounce = false
 
@@ -736,10 +742,26 @@ CreateAction(Esp, "Clear Priority List", function()
     SaveConfig()
 end)
 
+CreateToggle(Wld, "RTX Visuals", "RTX")
+CreateToggle(Wld, "Depth of Field (Cinematic)", "DOF")
 CreateToggle(Wld, "Nightmode", "Nightmode")
 CreateToggle(Wld, "Fullbright", "Fullbright")
 CreateToggle(Wld, "No Shadows", "NoShadows")
-CreateToggle(Wld, "RTX Visuals", "RTX")
+
+local SkyBtnLabel = "Sky: " .. Settings.SkyPreset
+local skyNames = {"Synthwave", "Purple Night", "Sunset", "Galaxy"}
+local currentSkyIdx = 1
+
+CreateAction(Wld, "Cycle Skybox", function()
+    currentSkyIdx = (currentSkyIdx % #skyNames) + 1
+    Settings.SkyPreset = skyNames[currentSkyIdx]
+    ApplySky(Settings.SkyPreset)
+    SaveConfig()
+end)
+
+CreateSlider(Wld, "Contrast", 0, 50, "Contrast")
+CreateSlider(Wld, "Saturation", 0, 100, "Saturation")
+
 CreateSlider(Wld, "World Ambient [R]", 0, 255, "WorldR")
 CreateSlider(Wld, "World Ambient [G]", 0, 255, "WorldG")
 CreateSlider(Wld, "World Ambient [B]", 0, 255, "WorldB")
@@ -762,22 +784,65 @@ Info.Font = Enum.Font.SourceSans
 Info.TextSize = 13
 Info.Parent = Oth
 
-local RTX_CC = Instance.new("ColorCorrectionEffect", Lighting)
-RTX_CC.Brightness = 0.04
-RTX_CC.Contrast = 0.2
-RTX_CC.Saturation = 0.35
-RTX_CC.Enabled = false
+local SkyPresets = {
+    ["Synthwave"] = {
+        SkyboxBk = "rbxassetid://600830446", SkyboxDn = "rbxassetid://600831625",
+        SkyboxFt = "rbxassetid://600832720", SkyboxLf = "rbxassetid://600886090",
+        SkyboxRt = "rbxassetid://600833862", SkyboxUp = "rbxassetid://600835177"
+    },
+    ["Purple Night"] = {
+        SkyboxBk = "rbxassetid://508457591", SkyboxDn = "rbxassetid://508457636",
+        SkyboxFt = "rbxassetid://508457677", SkyboxLf = "rbxassetid://508457722",
+        SkyboxRt = "rbxassetid://508457768", SkyboxUp = "rbxassetid://508457819"
+    },
+    ["Sunset"] = {
+        SkyboxBk = "rbxassetid://416550734", SkyboxDn = "rbxassetid://416550920",
+        SkyboxFt = "rbxassetid://416551183", SkyboxLf = "rbxassetid://416551392",
+        SkyboxRt = "rbxassetid://416551608", SkyboxUp = "rbxassetid://416551786"
+    },
+    ["Galaxy"] = {
+        SkyboxBk = "rbxassetid://159454299", SkyboxDn = "rbxassetid://159454296",
+        SkyboxFt = "rbxassetid://159454293", SkyboxLf = "rbxassetid://159454286",
+        SkyboxRt = "rbxassetid://159454300", SkyboxUp = "rbxassetid://159454288"
+    }
+}
 
-local RTX_Bloom = Instance.new("BloomEffect", Lighting)
-RTX_Bloom.Intensity = 0.7
-RTX_Bloom.Size = 20
-RTX_Bloom.Threshold = 1.1
-RTX_Bloom.Enabled = false
+local CustomSky = Lighting:FindFirstChild("onehvh_Sky") or Instance.new("Sky")
+CustomSky.Name = "onehvh_Sky"
+CustomSky.Parent = Lighting
 
-local RTX_Sun = Instance.new("SunRaysEffect", Lighting)
-RTX_Sun.Intensity = 0.12
-RTX_Sun.Spread = 0.8
-RTX_Sun.Enabled = false
+local function ApplySky(presetName)
+    local data = SkyPresets[presetName]
+    if data then
+        for prop, id in pairs(data) do
+            CustomSky[prop] = id
+        end
+    end
+end
+ApplySky(Settings.SkyPreset)
+
+local RTX_CC = Lighting:FindFirstChild("onehvh_CC") or Instance.new("ColorCorrectionEffect", Lighting)
+RTX_CC.Name = "onehvh_CC"
+
+local RTX_Bloom = Lighting:FindFirstChild("onehvh_Bloom") or Instance.new("BloomEffect", Lighting)
+RTX_Bloom.Name = "onehvh_Bloom"
+
+local RTX_Sun = Lighting:FindFirstChild("onehvh_Sun") or Instance.new("SunRaysEffect", Lighting)
+RTX_Sun.Name = "onehvh_Sun"
+
+local RTX_DOF = Lighting:FindFirstChild("onehvh_DOF") or Instance.new("DepthOfFieldEffect", Lighting)
+RTX_DOF.Name = "onehvh_DOF"
+RTX_DOF.FarIntensity = 0.35
+RTX_DOF.NearIntensity = 0.15
+RTX_DOF.FocusDistance = 25
+RTX_DOF.InFocusRadius = 30
+
+local RTX_Atmo = Lighting:FindFirstChild("onehvh_Atmo") or Instance.new("Atmosphere", Lighting)
+RTX_Atmo.Name = "onehvh_Atmo"
+RTX_Atmo.Density = 0.3
+RTX_Atmo.Offset = 0.25
+RTX_Atmo.Haze = 0.5
+RTX_Atmo.Glare = 0.4
 
 local rayParams = RaycastParams.new()
 rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -1020,23 +1085,40 @@ RunService.RenderStepped:Connect(function()
 
     if Settings.Nightmode then
         Lighting.TimeOfDay = "00:00:00"
-        Lighting.Ambient = Color3.fromRGB(10, 10, 15)
-        Lighting.OutdoorAmbient = Color3.fromRGB(10, 10, 15)
+        Lighting.Ambient = Color3.fromRGB(12, 10, 20)
+        Lighting.OutdoorAmbient = Color3.fromRGB(12, 10, 20)
+        Lighting.ExposureCompensation = -0.2
     elseif Settings.Fullbright then
         Lighting.TimeOfDay = "12:00:00"
         Lighting.Ambient = Color3.fromRGB(255, 255, 255)
         Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+        Lighting.ExposureCompensation = 0.5
     else
         Lighting.TimeOfDay = OriginalLighting.TimeOfDay
         local customColor = Color3.fromRGB(Settings.WorldR, Settings.WorldG, Settings.WorldB)
         Lighting.Ambient = customColor
         Lighting.OutdoorAmbient = customColor
+        Lighting.ExposureCompensation = 0.1
     end
+    
     Lighting.GlobalShadows = not Settings.NoShadows
 
     RTX_CC.Enabled = Settings.RTX
+    RTX_CC.Contrast = Settings.Contrast / 100
+    RTX_CC.Saturation = Settings.Saturation / 100
+    RTX_CC.Brightness = 0.03
+
     RTX_Bloom.Enabled = Settings.RTX
+    RTX_Bloom.Intensity = 0.85
+    RTX_Bloom.Size = 24
+    RTX_Bloom.Threshold = 0.95
+
     RTX_Sun.Enabled = Settings.RTX
+    RTX_Sun.Intensity = 0.2
+    RTX_Sun.Spread = 0.85
+
+    RTX_DOF.Enabled = Settings.DOF and Settings.RTX
+    RTX_Atmo.Density = Settings.RTX and 0.35 or 0
 
     CurrentTarget = GetClosestTarget()
 
@@ -1050,7 +1132,11 @@ RunService.RenderStepped:Connect(function()
     if char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
         if Settings.Spinbot then
-            hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(Settings.SpinSpeed), 0)
+            hum.AutoRotate = false
+            spinAngle = (spinAngle + Settings.SpinSpeed) % 360
+            hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, math.rad(spinAngle), 0)
+        else
+            hum.AutoRotate = true
         end
         
         if Settings.AntiAim then
